@@ -1,0 +1,521 @@
+{
+  "startedAt": 1786948543218,
+  "endedAt": 1786952143575,
+  "runMs": 3600357,
+  "reconnectLog": [],
+  "healthLog": [
+    {
+      "t": 1786948543526,
+      "elapsedMin": 0,
+      "upbit": {
+        "status": "connecting",
+        "reconnectAttempts": 0,
+        "lastTickAt": 1786948543096,
+        "lastError": null
+      },
+      "binance": {
+        "status": "connected",
+        "reconnectAttempts": 0,
+        "lastTickAt": 1786948542828,
+        "lastError": null
+      },
+      "bitbank": {
+        "status": "connecting",
+        "reconnectAttempts": 0,
+        "lastTickAt": 1786948537442,
+        "lastError": null
+      }
+    },
+    {
+      "t": 1786948843527,
+      "elapsedMin": 5,
+      "upbit": {
+        "status": "connected",
+        "reconnectAttempts": 0,
+        "lastTickAt": 1786948843320,
+        "lastError": null
+      },
+      "binance": {
+        "status": "connected",
+        "reconnectAttempts": 0,
+        "lastTickAt": 1786948843317,
+        "lastError": null
+      },
+      "bitbank": {
+        "status": "connected",
+        "reconnectAttempts": 0,
+        "lastTickAt": 1786948842277,
+        "lastError": null
+      }
+    },
+    {
+      "t": 1786949143529,
+      "elapsedMin": 10,
+      "upbit": {
+        "status": "connected",
+        "reconnectAttempts": 0,
+        "lastTickAt": 1786949143248,
+        "lastError": null
+      },
+      "binance": {
+        "status": "connected",
+        "reconnectAttempts": 0,
+        "lastTickAt": 1786949143015,
+        "lastError": null
+      },
+      "bitbank": {
+        "status": "connected",
+        "reconnectAttempts": 0,
+        "lastTickAt": 1786949142715,
+        "lastError": null
+      }
+    },
+    {
+      "t": 1786949443558,
+      "elapsedMin": 15,
+      "upbit": {
+        "status": "connected",
+        "reconnectAttempts": 0,
+        "lastTickAt": 1786949443277,
+        "lastError": null
+      },
+      "binance": {
+        "status": "connected",
+        "reconnectAttempts": 0,
+        "lastTickAt": 1786949443317,
+        "lastError": null
+      },
+      "bitbank": {
+        "status": "connected",
+        "reconnectAttempts": 0,
+        "lastTickAt": 1786949442145,
+        "lastError": null
+      }
+    },
+    {
+      "t": 1786949743562,
+      "elapsedMin": 20,
+      "upbit": {
+        "status": "connected",
+        "reconnectAttempts": 0,
+        "lastTickAt": 1786949739975,
+        "lastError": null
+      },
+      "binance": {
+        "status": "connected",
+        "reconnectAttempts": 0,
+        "lastTickAt": 1786949743016,
+        "lastError": null
+      },
+      "bitbank": {
+        "status": "connected",
+        "reconnectAttempts": 0,
+        "lastTickAt": 1786949742476,
+        "lastError": null
+      }
+    },
+    {
+      "t": 1786950043562,
+      "elapsedMin": 25,
+      "upbit": {
+        "status": "connected",
+        "reconnectAttempts": 0,
+        "lastTickAt": 1786950043438,
+        "lastError": null
+      },
+      "binance": {
+        "status": "connected",
+        "reconnectAttempts": 0,
+        "lastTickAt": 1786950043016,
+        "lastError": null
+      },
+      "bitbank": {
+        "status": "connected",
+        "reconnectAttempts": 0,
+        "lastTickAt": 1786950041944,
+        "lastError": null
+      }
+    },
+    {
+      "t": 1786950343569,
+      "elapsedMin": 30,
+      "upbit": {
+        "status": "connected",
+        "reconnectAttempts": 0,
+        "lastTickAt": 1786950342748,
+        "lastError": null
+      },
+      "binance": {
+        "status": "connected",
+        "reconnectAttempts": 0,
+        "lastTickAt": 1786950343016,
+        "lastError": null
+      },
+      "bitbank": {
+        "status": "connected",
+        "reconnectAttempts": 0,
+        "lastTickAt": 1786950342528,
+        "lastError": null
+      }
+    },
+    {
+      "t": 1786950643569,
+      "elapsedMin": 35,
+      "upbit": {
+        "status": "connected",
+        "reconnectAttempts": 0,
+        "lastTickAt": 1786950642670,
+        "lastError": null
+      },
+      "binance": {
+        "status": "connected",
+        "reconnectAttempts": 0,
+        "lastTickAt": 1786950643015,
+        "lastError": null
+      },
+      "bitbank": {
+        "status": "connected",
+        "reconnectAttempts": 0,
+        "lastTickAt": 1786950641940,
+        "lastError": null
+      }
+    },
+    {
+      "t": 1786950943574,
+      "elapsedMin": 40,
+      "upbit": {
+        "status": "connected",
+        "reconnectAttempts": 0,
+        "lastTickAt": 1786950941462,
+        "lastError": null
+      },
+      "binance": {
+        "status": "connected",
+        "reconnectAttempts": 0,
+        "lastTickAt": 1786950943317,
+        "lastError": null
+      },
+      "bitbank": {
+        "status": "connected",
+        "reconnectAttempts": 0,
+        "lastTickAt": 1786950942462,
+        "lastError": null
+      }
+    },
+    {
+      "t": 1786951243576,
+      "elapsedMin": 45,
+      "upbit": {
+        "status": "connected",
+        "reconnectAttempts": 0,
+        "lastTickAt": 1786951241826,
+        "lastError": null
+      },
+      "binance": {
+        "status": "connected",
+        "reconnectAttempts": 0,
+        "lastTickAt": 1786951243014,
+        "lastError": null
+      },
+      "bitbank": {
+        "status": "connected",
+        "reconnectAttempts": 0,
+        "lastTickAt": 1786951241701,
+        "lastError": null
+      }
+    },
+    {
+      "t": 1786951543570,
+      "elapsedMin": 50,
+      "upbit": {
+        "status": "connected",
+        "reconnectAttempts": 0,
+        "lastTickAt": 1786951543399,
+        "lastError": null
+      },
+      "binance": {
+        "status": "connected",
+        "reconnectAttempts": 0,
+        "lastTickAt": 1786951543016,
+        "lastError": null
+      },
+      "bitbank": {
+        "status": "connected",
+        "reconnectAttempts": 0,
+        "lastTickAt": 1786951541894,
+        "lastError": null
+      }
+    },
+    {
+      "t": 1786951843572,
+      "elapsedMin": 55,
+      "upbit": {
+        "status": "connected",
+        "reconnectAttempts": 0,
+        "lastTickAt": 1786951843242,
+        "lastError": null
+      },
+      "binance": {
+        "status": "connected",
+        "reconnectAttempts": 0,
+        "lastTickAt": 1786951843015,
+        "lastError": null
+      },
+      "bitbank": {
+        "status": "connected",
+        "reconnectAttempts": 0,
+        "lastTickAt": 1786951841713,
+        "lastError": null
+      }
+    },
+    {
+      "t": 1786952143564,
+      "elapsedMin": 60,
+      "upbit": {
+        "status": "connected",
+        "reconnectAttempts": 0,
+        "lastTickAt": 1786952143095,
+        "lastError": null
+      },
+      "binance": {
+        "status": "connected",
+        "reconnectAttempts": 0,
+        "lastTickAt": 1786952143016,
+        "lastError": null
+      },
+      "bitbank": {
+        "status": "connected",
+        "reconnectAttempts": 0,
+        "lastTickAt": 1786952141488,
+        "lastError": null
+      }
+    }
+  ],
+  "exchanges": {
+    "upbit": {
+      "malformed": 0,
+      "coins": {
+        "BTC": {
+          "tickCount": 2975,
+          "minPrice": 89633000,
+          "maxPrice": 89890000,
+          "interTickGapMs": {
+            "avgMs": 1212,
+            "maxMs": 24461,
+            "minMs": -75
+          }
+        },
+        "ETH": {
+          "tickCount": 1383,
+          "minPrice": 2683000,
+          "maxPrice": 2697000,
+          "interTickGapMs": {
+            "avgMs": 2601,
+            "maxMs": 58595,
+            "minMs": 0
+          }
+        },
+        "XRP": {
+          "tickCount": 2806,
+          "minPrice": 1416,
+          "maxPrice": 1421,
+          "interTickGapMs": {
+            "avgMs": 1282,
+            "maxMs": 23394,
+            "minMs": -2
+          }
+        },
+        "SOL": {
+          "tickCount": 936,
+          "minPrice": 106500,
+          "maxPrice": 107100,
+          "interTickGapMs": {
+            "avgMs": 3849,
+            "maxMs": 63183,
+            "minMs": 0
+          }
+        },
+        "DOT": {
+          "tickCount": 55,
+          "minPrice": 1073,
+          "maxPrice": 1081,
+          "interTickGapMs": {
+            "avgMs": 62578,
+            "maxMs": 762893,
+            "minMs": 0
+          }
+        }
+      }
+    },
+    "binance": {
+      "malformed": 0,
+      "coins": {
+        "BTC": {
+          "tickCount": 3282,
+          "minPrice": 63534.63,
+          "maxPrice": 63715.58,
+          "interTickGapMs": {
+            "avgMs": 1097,
+            "maxMs": 5001,
+            "minMs": 996
+          }
+        },
+        "ETH": {
+          "tickCount": 2695,
+          "minPrice": 1902.11,
+          "maxPrice": 1912.6,
+          "interTickGapMs": {
+            "avgMs": 1336,
+            "maxMs": 6000,
+            "minMs": 996
+          }
+        },
+        "XRP": {
+          "tickCount": 1320,
+          "minPrice": 1.0037,
+          "maxPrice": 1.0074,
+          "interTickGapMs": {
+            "avgMs": 2729,
+            "maxMs": 15000,
+            "minMs": 998
+          }
+        },
+        "SOL": {
+          "tickCount": 2143,
+          "minPrice": 75.52,
+          "maxPrice": 76,
+          "interTickGapMs": {
+            "avgMs": 1680,
+            "maxMs": 9000,
+            "minMs": 996
+          }
+        },
+        "DOT": {
+          "tickCount": 306,
+          "minPrice": 0.76,
+          "maxPrice": 0.767,
+          "interTickGapMs": {
+            "avgMs": 11551,
+            "maxMs": 101000,
+            "minMs": 996
+          }
+        }
+      }
+    },
+    "bitbank": {
+      "malformed": 0,
+      "coins": {
+        "BTC": {
+          "tickCount": 3596,
+          "minPrice": 10100526.5,
+          "maxPrice": 10127999.5,
+          "interTickGapMs": {
+            "avgMs": 1001,
+            "maxMs": 1876,
+            "minMs": 181
+          },
+          "bookUnusableCount": 0,
+          "rawWsGapMs": {
+            "avgMs": 1002,
+            "maxMs": 1876,
+            "minMs": 181
+          },
+          "spread": {
+            "sampleCount": 3595,
+            "avgSpreadPct": 0.0024960737220200663,
+            "minSpreadPct": 0.000009873618180964563,
+            "maxSpreadPct": 0.03937585120597943
+          }
+        },
+        "ETH": {
+          "tickCount": 3555,
+          "minPrice": 302592.5,
+          "maxPrice": 303964.5,
+          "interTickGapMs": {
+            "avgMs": 1013,
+            "maxMs": 3414,
+            "minMs": 0
+          },
+          "bookUnusableCount": 0,
+          "rawWsGapMs": {
+            "avgMs": 1013,
+            "maxMs": 3414,
+            "minMs": 0
+          },
+          "spread": {
+            "sampleCount": 3554,
+            "avgSpreadPct": 0.0005899707929215106,
+            "minSpreadPct": 0.00032898578616910855,
+            "maxSpreadPct": 0.07328885382174961
+          }
+        },
+        "XRP": {
+          "tickCount": 3592,
+          "minPrice": 159.69,
+          "maxPrice": 160.062,
+          "interTickGapMs": {
+            "avgMs": 1003,
+            "maxMs": 2304,
+            "minMs": 65
+          },
+          "bookUnusableCount": 0,
+          "rawWsGapMs": {
+            "avgMs": 1003,
+            "maxMs": 2304,
+            "minMs": 65
+          },
+          "spread": {
+            "sampleCount": 3591,
+            "avgSpreadPct": 0.0007138905010936635,
+            "minSpreadPct": 0.0006247754713179794,
+            "maxSpreadPct": 0.045012659810573424
+          }
+        },
+        "SOL": {
+          "tickCount": 3362,
+          "minPrice": 12015.650000000001,
+          "maxPrice": 12068.95,
+          "interTickGapMs": {
+            "avgMs": 1071,
+            "maxMs": 4773,
+            "minMs": 0
+          },
+          "bookUnusableCount": 0,
+          "rawWsGapMs": {
+            "avgMs": 1071,
+            "maxMs": 4773,
+            "minMs": 0
+          },
+          "spread": {
+            "sampleCount": 3361,
+            "avgSpreadPct": 0.0011964374867738184,
+            "minSpreadPct": 0.000828572493881935,
+            "maxSpreadPct": 0.08124689106283595
+          }
+        },
+        "DOT": {
+          "tickCount": 3161,
+          "minPrice": 120.842,
+          "maxPrice": 122.009,
+          "interTickGapMs": {
+            "avgMs": 1141,
+            "maxMs": 32287,
+            "minMs": 0
+          },
+          "bookUnusableCount": 0,
+          "rawWsGapMs": {
+            "avgMs": 1141,
+            "maxMs": 32287,
+            "minMs": 55
+          },
+          "spread": {
+            "sampleCount": 3160,
+            "avgSpreadPct": 0.2534413815818666,
+            "minSpreadPct": 0.0008261697530913735,
+            "maxSpreadPct": 0.6315346291488322
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,32 @@
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 3.25rem;
+  min-height: 2rem;
+  padding: 0.25rem 0.75rem;
+  border: 1px solid color-mix(in oklch, var(--color-text-dim) 35%, transparent);
+  border-radius: 0.25rem;
+  background-color: var(--color-surface-raised);
+  color: var(--color-text);
+  font-family: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.theme-toggle__label {
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.theme-toggle:hover {
+  border-color: color-mix(in oklch, var(--color-text-dim) 55%, transparent);
+}
+
+.theme-toggle:focus-visible {
+  outline: 2px solid var(--color-text);
+  outline-offset: 2px;
+}

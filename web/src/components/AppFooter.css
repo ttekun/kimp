@@ -1,0 +1,21 @@
+.app-footer {
+  margin-top: auto;
+  padding: 1.25rem var(--space-section);
+  background: color-mix(in oklch, var(--color-surface-raised) 70%, var(--color-surface));
+  border-top: 1px solid color-mix(in oklch, var(--color-text-dim) 18%, transparent);
+  font-size: 0.8125rem;
+  color: var(--color-text-dim);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.app-footer a {
+  color: var(--color-text);
+}
+
+.app-footer__docs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.25rem;
+}

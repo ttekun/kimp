@@ -1,0 +1,17 @@
+node_modules/
+dist/
+build/
+coverage/
+.env
+.env.*
+!.env.example
+*.local
+.DS_Store
+*.log
+.vite/
+playwright-report/
+test-results/
+blob-report/
+logs/
+tmp-work/
+.pnpm-store/

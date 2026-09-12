@@ -1,0 +1,23 @@
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "jsx": "react-jsx",
+    "paths": {
+      "@kimchi/server-types": ["../server/src/core/types.ts"],
+      "@kimchi/server-symbols": ["../server/src/core/symbols.ts"],
+      "@kimchi/core/snapshot": ["../server/src/core/snapshot.ts"],
+      "@kimchi/core/premium": ["../server/src/core/premium.ts"],
+      "@kimchi/core/symbols": ["../server/src/core/symbols.ts"],
+      "@kimchi/upbit-wire": ["../server/src/connectors/upbitWire.ts"],
+      "@kimchi/binance-wire": ["../server/src/connectors/binanceWire.ts"],
+      "@kimchi/bitbank-wire": ["../server/src/connectors/bitbankWire.ts"],
+      "@kimchi/fx-normalize": ["../server/src/connectors/fxNormalize.ts"]
+    },
+    "noEmit": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true
+  },
+  "include": ["src", "e2e", "vite.config.ts", "vitest.config.ts", "playwright.config.ts"]
+}

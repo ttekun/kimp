@@ -1,0 +1,147 @@
+.premium-table {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.premium-table__title {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-dim);
+}
+
+.premium-table__scroll {
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* max-content lets the nowrap columns exceed the viewport so __scroll actually scrolls. */
+.premium-table table {
+  width: 100%;
+  min-width: max-content;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.premium-table th,
+.premium-table td {
+  padding: 0.45rem 0.5rem;
+  text-align: right;
+  white-space: nowrap;
+  border-bottom: 1px solid color-mix(in oklch, var(--color-text-dim) 16%, transparent);
+}
+
+.premium-table th[data-col='coin'],
+.premium-table td[data-col='coin'],
+.premium-table th[scope='row'] {
+  text-align: left;
+  position: sticky;
+  left: 0;
+  background: var(--color-surface);
+  z-index: 1;
+}
+
+.premium-table thead th {
+  background: var(--color-surface-raised);
+}
+
+.premium-table thead th[data-col='coin'] {
+  background: var(--color-surface-raised);
+  z-index: 2;
+}
+
+.premium-table__sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  font-size: 0.6875rem;
+  cursor: pointer;
+}
+
+.premium-table__sort:focus-visible {
+  outline: 2px solid var(--color-text);
+  outline-offset: 2px;
+}
+
+.premium-table__dim {
+  color: var(--color-text-dim);
+}
+
+.premium-table__premium {
+  font-weight: 600;
+}
+
+.premium-table__row[data-stale='true'] td,
+.premium-table__row[data-stale='true'] th {
+  color: var(--color-stale);
+}
+
+.premium-table__row[data-tint='true'] {
+  background: color-mix(in oklch, var(--color-up) 4%, transparent);
+}
+
+.premium-table__row[data-tint='true'] th[data-col='coin'] {
+  background: color-mix(in oklch, var(--color-up) 4%, var(--color-surface));
+}
+
+.premium-table td[data-sign='up'],
+.premium-table__premium[data-sign='up'] {
+  color: var(--color-up);
+}
+
+.premium-table td[data-sign='down'],
+.premium-table__premium[data-sign='down'] {
+  color: var(--color-down);
+}
+
+.premium-table__row[data-flash='up'] td[data-col='upbit'] {
+  animation: premium-flash-up var(--duration-flash) ease-out;
+}
+
+.premium-table__row[data-flash='down'] td[data-col='upbit'] {
+  animation: premium-flash-down var(--duration-flash) ease-out;
+}
+
+@keyframes premium-flash-up {
+  from {
+    background-color: color-mix(in oklch, var(--color-up) 35%, transparent);
+  }
+  to {
+    background-color: transparent;
+  }
+}
+
+@keyframes premium-flash-down {
+  from {
+    background-color: color-mix(in oklch, var(--color-down) 35%, transparent);
+  }
+  to {
+    background-color: transparent;
+  }
+}
+
+.premium-tables {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-section);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .premium-table__row[data-flash='up'] td[data-col='upbit'],
+  .premium-table__row[data-flash='down'] td[data-col='upbit'] {
+    animation: none;
+  }
+}
