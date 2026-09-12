@@ -11,7 +11,6 @@ export const kimchiAliases = {
   '@kimchi/server-types': path.join(serverSrc, 'core/types.ts'),
   '@kimchi/server-symbols': path.join(serverSrc, 'core/symbols.ts'),
   '@kimchi/core/snapshot': path.join(serverSrc, 'core/snapshot.ts'),
-  '@kimchi/core/premium': path.join(serverSrc, 'core/premium.ts'),
   '@kimchi/core/symbols': path.join(serverSrc, 'core/symbols.ts'),
   '@kimchi/upbit-wire': path.join(serverSrc, 'connectors/upbitWire.ts'),
   '@kimchi/binance-wire': path.join(serverSrc, 'connectors/binanceWire.ts'),

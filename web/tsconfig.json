@@ -7,7 +7,6 @@
       "@kimchi/server-types": ["../server/src/core/types.ts"],
       "@kimchi/server-symbols": ["../server/src/core/symbols.ts"],
       "@kimchi/core/snapshot": ["../server/src/core/snapshot.ts"],
-      "@kimchi/core/premium": ["../server/src/core/premium.ts"],
       "@kimchi/core/symbols": ["../server/src/core/symbols.ts"],
       "@kimchi/upbit-wire": ["../server/src/connectors/upbitWire.ts"],
       "@kimchi/binance-wire": ["../server/src/connectors/binanceWire.ts"],
