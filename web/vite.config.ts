@@ -20,7 +20,7 @@ export const kimchiAliases = {
 };
 
 export default defineConfig({
-  base: process.env.GITHUB_PAGES === 'true' ? '/kimchi-premium-clone/' : '/',
+  base: process.env.GITHUB_PAGES === 'true' ? '/kimp/' : '/',
   plugins: [
     react(),
     {

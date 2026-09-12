@@ -6,7 +6,7 @@
 
 **Remaining queue:** **none** — `docs/05` checklist is finished (5.2 soak waived; 7.1 deploy close-out recorded below).
 
-**Now:** GitHub Pages + browser aggregation. Public URL: `https://ttekun.github.io/kimchi-premium-clone/` (Fly `kimp.fly.dev` retired).
+**Now:** GitHub Pages + browser aggregation. Public URL: `https://ttekun.github.io/kimp/` (repo `ttekun/kimp`; Fly `kimp.fly.dev` retired).
 
 **Status:** Production is static Pages. Node aggregator remains for unit tests. Deploy: push `main` (Actions Pages). Subpath smoke (`GITHUB_PAGES=true` preview) and Playwright e2e (store injection, no Engine.IO mock) are green locally. JS gzip ~89 KB (budget 200 KB).
 

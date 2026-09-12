@@ -9,7 +9,7 @@
 ## System Diagram
 
 ```
-Browser SPA (GitHub Pages: https://ttekun.github.io/kimchi-premium-clone/)
+Browser SPA (GitHub Pages: https://ttekun.github.io/kimp/)
   -> wss://api.upbit.com/websocket/v1
   -> wss://stream.binance.com:443  miniTicker
   -> wss://stream.bitbank.cc      Socket.IO ticker_*_jpy

@@ -4,7 +4,8 @@ Ops notes for **GitHub Pages production** (static SPA, browser aggregation). The
 
 ## Production URL
 
-- Site: `https://ttekun.github.io/kimchi-premium-clone/`
+- Site: `https://ttekun.github.io/kimp/`
+- Repo: `https://github.com/ttekun/kimp`
 - Deploy: push `main` → `.github/workflows/pages.yml` (Actions Pages, artifact `web/dist`)
 - Repo must be **public** (free Pages)
 
@@ -12,7 +13,7 @@ Ops notes for **GitHub Pages production** (static SPA, browser aggregation). The
 
 There is no `/api/health`. Check:
 
-- `GET https://ttekun.github.io/kimchi-premium-clone/` → 200 HTML
+- `GET https://ttekun.github.io/kimp/` → 200 HTML
 - `GET …/theme-boot.js` → 200
 - In the browser: FX bar transport `live`, feed dots, both premium tables populated
 - Exchange sockets are per visitor; Origin is `https://ttekun.github.io`
