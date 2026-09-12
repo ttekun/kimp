@@ -133,7 +133,7 @@ A always-on Node aggregator needs a paid VM (Fly trial ended). GitHub Pages is f
 ## Directory Layout (planned)
 
 ```
-kimchi-premium-clone/
+kimp/
 ├── docs/                       # these documents
 ├── server/
 │   ├── src/

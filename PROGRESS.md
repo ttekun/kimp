@@ -1,4 +1,4 @@
-# Progress — kimchi-premium-clone implementation
+# Progress — kimp implementation
 
 ## Currently working on
 
@@ -6,11 +6,11 @@
 
 **Remaining queue:** **none** — `docs/05` checklist is finished (5.2 soak waived; 7.1 deploy close-out recorded below).
 
-**Now:** GitHub Pages + browser aggregation. Public URL: `https://ttekun.github.io/kimp/` (repo `ttekun/kimp`; Fly `kimp.fly.dev` retired).
+**Now:** GitHub Pages + browser aggregation. Public URL: `https://ttekun.github.io/kimp/` (repo `ttekun/kimp`). Fly/Docker deploy files removed.
 
 **Status:** Production is static Pages. Node aggregator remains for unit tests. Deploy: push `main` (Actions Pages). Subpath smoke (`GITHUB_PAGES=true` preview) and Playwright e2e (store injection, no Engine.IO mock) are green locally. JS gzip ~89 KB (budget 200 KB).
 
-**Forward context / LOW accepted:** Lighthouse SEO 60 (no meta description); Playwright screenshots captured on macOS Chromium — Linux CI may need `--update-snapshots`. Debug JSON panel removed (user 2026-09-05).
+**Forward context / LOW accepted:** Lighthouse SEO 60 (no meta description). Debug JSON panel removed (user 2026-09-05).
 
 **Workflow:** single-agent loop in `docs/07`.
 
@@ -130,7 +130,7 @@ Recorded in "Currently working on": Fly.io/VM/production endpoint is allowed **a
 
 **6.1** Playwright mocked `routeWebSocket('**/ws')` + REST fixture: load, premium sort live-before-omit (`XRP ETH BTC SOL DOT`), theme persist (`kimchi-theme`), reconnect banner. Mutation: `showTransportBanner = false` → E2E + FxStatusBar unit test failed; restored.
 
-**6.2** Full-page screenshots 320/768/1024/1440 × light/dark (`web/e2e/visual.spec.ts-snapshots/`, Arial forced). Snapshot path omits OS; Linux CI may still raster-diff — LOW.
+**6.2** Full-page screenshots 320/768/1024/1440 × light/dark (`web/e2e/visual.spec.ts-snapshots/`, Arial forced). Snapshot path omits OS.
 
 **6.3** axe no serious/critical both themes; keyboard coin/sort/theme; reduced-motion flash. Mutation: table `animation: none` → `premium-flash-up` made flash test fail; restored. Budgets: JS 53.27 KB gz / CSS 3.45 KB gz. Live Lighthouse snapshot a11y/best-practices 100; LCP **655 ms** on `:5173` (budget < 2.5 s). SEO 60 (no meta description) accepted LOW.
 

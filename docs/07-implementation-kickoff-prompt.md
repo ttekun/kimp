@@ -7,7 +7,7 @@ immediately**. Do not ask them to paste a prompt. Do not wait for a second copy
 of these rules.
 
 Resume state is **not** in this file. Always read
-`~/dev/kimchi-premium-clone/PROGRESS.md` → **"Currently working on"** first and
+`~/dev/kimp/PROGRESS.md` → **"Currently working on"** first and
 start that task. Update the resume block in PROGRESS.md when you switch tasks;
 do not keep a stale task number here.
 
@@ -27,7 +27,7 @@ handing a task to another model for "the review role" is not.
 ## Context
 
 The planning phase is complete. Plan documents live under
-`~/dev/kimchi-premium-clone/docs/` (`00-overview.md` through `06-plan-review.md`).
+`~/dev/kimp/docs/` (`00-overview.md` through `06-plan-review.md`).
 They were validated through 5 rounds of adversarial review
 (`06-plan-review.md` — final verdict: **ZERO FINDINGS - APPROVED**).
 
@@ -44,15 +44,15 @@ allowed. Do not re-create that four-role loop.
 
 Read these first, in order, before doing anything else:
 
-1. `~/dev/kimchi-premium-clone/PROGRESS.md` (resume here — "Currently working on")
-2. `~/dev/kimchi-premium-clone/docs/07-implementation-kickoff-prompt.md` (this workflow)
-3. `~/dev/kimchi-premium-clone/docs/00-overview.md`
-4. `~/dev/kimchi-premium-clone/docs/01-site-analysis.md`
-5. `~/dev/kimchi-premium-clone/docs/02-architecture.md`
-6. `~/dev/kimchi-premium-clone/docs/03-api-integration.md`
-7. `~/dev/kimchi-premium-clone/docs/04-ui-design.md`
-8. `~/dev/kimchi-premium-clone/docs/05-task-breakdown.md`
-9. `~/dev/kimchi-premium-clone/docs/06-plan-review.md` (final approved plan — for context only)
+1. `~/dev/kimp/PROGRESS.md` (resume here — "Currently working on")
+2. `~/dev/kimp/docs/07-implementation-kickoff-prompt.md` (this workflow)
+3. `~/dev/kimp/docs/00-overview.md`
+4. `~/dev/kimp/docs/01-site-analysis.md`
+5. `~/dev/kimp/docs/02-architecture.md`
+6. `~/dev/kimp/docs/03-api-integration.md`
+7. `~/dev/kimp/docs/04-ui-design.md`
+8. `~/dev/kimp/docs/05-task-breakdown.md`
+9. `~/dev/kimp/docs/06-plan-review.md` (final approved plan — for context only)
 
 The task list and phase/dependency order in `05-task-breakdown.md` is
 authoritative. Do not re-plan or re-architect — that phase is done and was
@@ -99,7 +99,7 @@ Repeat for every remaining task in `05-task-breakdown.md`, in dependency order.
 
 ## Progress tracking (mandatory)
 
-Maintain `~/dev/kimchi-premium-clone/PROGRESS.md` with:
+Maintain `~/dev/kimp/PROGRESS.md` with:
 
 - A checklist mirroring the phases/tasks in `05-task-breakdown.md` (`- [ ]` / `- [x]`)
 - For each completed task: timestamp, one-line summary, any notable deviation
