@@ -1,3 +1,5 @@
+import { z } from 'zod';
+
 export const FX_CACHE_KEY_PREFIX = 'kimp:fx:';
 
 export function utcDateString(nowMs: number): string {
@@ -23,14 +25,23 @@ export function readFxCache(storage: Storage, nowMs: number): StoredFxRates | nu
     if (parsed === null || typeof parsed !== 'object') {
       return null;
     }
-    const candidate = parsed as StoredFxRates;
+    const rate = z.object({
+      value: z.number().positive(),
+      fetchedAt: z.number().int().nonnegative().max(nowMs),
+      source: z.string().min(1),
+      ratesDate: z.iso.date(),
+    });
+    const result = z.object({ usdKrw: rate, usdJpy: rate }).safeParse(parsed);
+    if (!result.success) return null;
+    const { usdKrw, usdJpy } = result.data;
     if (
-      typeof candidate.usdKrw?.value !== 'number' ||
-      typeof candidate.usdJpy?.value !== 'number'
-    ) {
+      usdKrw.source !== usdJpy.source ||
+      usdKrw.ratesDate !== usdJpy.ratesDate ||
+      usdKrw.fetchedAt !== usdJpy.fetchedAt ||
+      utcDateString(usdKrw.fetchedAt) !== utcDateString(nowMs)
+    )
       return null;
-    }
-    return candidate;
+    return result.data;
   } catch {
     return null;
   }

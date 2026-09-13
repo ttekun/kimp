@@ -98,6 +98,7 @@ describe('normalizeBitbankWsMessage', () => {
       kind: 'book_unusable',
       coin: 'BTC',
       reason,
+      ts: payload.message.data.timestamp,
     });
   });
 
@@ -223,6 +224,7 @@ describe('normalizeBitbankRestTickersResponse', () => {
       kind: 'book_unusable',
       coin: 'BTC',
       reason: 'one_sided',
+      ts: bitbankWsBtcFixture.message.data.timestamp,
     });
   });
 

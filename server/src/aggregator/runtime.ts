@@ -42,7 +42,7 @@ function resolvePort(): number {
     return DEFAULT_PORT;
   }
 
-  const port = Number.parseInt(raw, 10);
+  const port = /^\d+$/.test(raw) ? Number(raw) : NaN;
   if (!Number.isFinite(port) || port <= 0 || port > 65_535) {
     throw new Error(`Invalid PORT: ${raw}`);
   }
@@ -98,38 +98,45 @@ export async function createAggregatorRuntime(
 
   const connectors: AggregatorConnectors = { upbit, binance, bitbank, fx };
 
-  await Promise.all([upbit.start(), binance.start(), bitbank.start(), fx.start()]);
+  let app: FastifyInstance | undefined;
+  try {
+    await Promise.all([upbit.start(), binance.start(), bitbank.start(), fx.start()]);
 
-  const enableFaultInjection = options?.enableFaultInjection ?? isFaultInjectionEnabled();
+    const enableFaultInjection = options?.enableFaultInjection ?? isFaultInjectionEnabled();
 
-  const app = await buildHttpApi({
-    getSnapshot: () => store.getSnapshot(),
-    getHealth: () => getAggregatorHealth(connectors),
-    staticRoot: options?.staticRoot ?? resolveStaticRoot(),
-    registerExtraRoutes: enableFaultInjection
-      ? (instance) => {
-          registerFaultInjectionRoutes(instance, { connectors, store });
-        }
-      : undefined,
-  });
+    app = await buildHttpApi({
+      getSnapshot: () => store.getSnapshot(),
+      getHealth: () => getAggregatorHealth(connectors),
+      staticRoot: options?.staticRoot ?? resolveStaticRoot(),
+      registerExtraRoutes: enableFaultInjection
+        ? (instance) => {
+            registerFaultInjectionRoutes(instance, { connectors, store });
+          }
+        : undefined,
+    });
 
-  const port = options?.port ?? resolvePort();
-  const host = options?.host ?? '0.0.0.0';
+    const port = options?.port ?? resolvePort();
+    const host = options?.host ?? '0.0.0.0';
 
-  await app.listen({ port, host });
-  console.log(`[aggregator] listening on http://${host}:${port}`);
-  if (enableFaultInjection) {
-    console.log('[aggregator] FAULT_INJECTION enabled: POST /api/dev/fault');
+    await app.listen({ port, host });
+    console.log(`[aggregator] listening on http://${host}:${port}`);
+    if (enableFaultInjection) {
+      console.log('[aggregator] FAULT_INJECTION enabled: POST /api/dev/fault');
+    }
+
+    const shutdown = async (): Promise<void> => {
+      console.log('[aggregator] shutting down');
+      upbit.stop();
+      binance.stop();
+      bitbank.stop();
+      fx.stop();
+      await app!.close();
+    };
+
+    return { app, connectors, store, shutdown };
+  } catch (error) {
+    for (const connector of Object.values(connectors)) connector.stop();
+    await app?.close();
+    throw error;
   }
-
-  const shutdown = async (): Promise<void> => {
-    console.log('[aggregator] shutting down');
-    upbit.stop();
-    binance.stop();
-    bitbank.stop();
-    fx.stop();
-    await app.close();
-  };
-
-  return { app, connectors, store, shutdown };
 }

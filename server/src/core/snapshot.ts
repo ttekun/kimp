@@ -58,36 +58,42 @@ function deriveFxStatus(rate: Rate, now: number): FeedStatus {
 function deriveUpbitStatus(ticker: UpbitTicker, now: number): UpbitTicker {
   return {
     ...ticker,
-    status: deriveFeedStatus(
-      ticker.ts,
-      now,
-      STALENESS_THRESHOLDS.upbit.staleAfterMs,
-      STALENESS_THRESHOLDS.upbit.downAfterMs,
-    ),
+    status: ticker.unavailable
+      ? 'down'
+      : deriveFeedStatus(
+          ticker.ts,
+          now,
+          STALENESS_THRESHOLDS.upbit.staleAfterMs,
+          STALENESS_THRESHOLDS.upbit.downAfterMs,
+        ),
   };
 }
 
 function deriveBinanceStatus(ticker: BinanceTicker, now: number): BinanceTicker {
   return {
     ...ticker,
-    status: deriveFeedStatus(
-      ticker.ts,
-      now,
-      STALENESS_THRESHOLDS.binance.staleAfterMs,
-      STALENESS_THRESHOLDS.binance.downAfterMs,
-    ),
+    status: ticker.unavailable
+      ? 'down'
+      : deriveFeedStatus(
+          ticker.ts,
+          now,
+          STALENESS_THRESHOLDS.binance.staleAfterMs,
+          STALENESS_THRESHOLDS.binance.downAfterMs,
+        ),
   };
 }
 
 function deriveBitbankStatus(ticker: BitbankTicker, now: number): BitbankTicker {
   return {
     ...ticker,
-    status: deriveFeedStatus(
-      ticker.ts,
-      now,
-      STALENESS_THRESHOLDS.bitbank.staleAfterMs,
-      STALENESS_THRESHOLDS.bitbank.downAfterMs,
-    ),
+    status: ticker.unavailable
+      ? 'down'
+      : deriveFeedStatus(
+          ticker.ts,
+          now,
+          STALENESS_THRESHOLDS.bitbank.staleAfterMs,
+          STALENESS_THRESHOLDS.bitbank.downAfterMs,
+        ),
   };
 }
 

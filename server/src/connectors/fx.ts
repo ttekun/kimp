@@ -149,6 +149,7 @@ export class FxPoller {
   private readonly callbacks: FxPollerCallbacks;
 
   private stopped = true;
+  private generation = 0;
   private primaryTimer: ReturnType<typeof setTimeout> | null = null;
   private crossCheckTimer: ReturnType<typeof setTimeout> | null = null;
   private retryTimer: ReturnType<typeof setTimeout> | null = null;
@@ -206,13 +207,16 @@ export class FxPoller {
   }
 
   async start(): Promise<void> {
+    if (!this.stopped) return;
     this.stopped = false;
+    this.generation += 1;
     this.healthState = { ...this.healthState, status: 'polling' };
     await this.runPrimaryPoll();
   }
 
   stop(): void {
     this.stopped = true;
+    this.generation += 1;
     this.clearTimers();
     this.healthState = { ...this.healthState, status: 'idle' };
   }
@@ -362,7 +366,7 @@ export class FxPoller {
 
     let response: Response;
     try {
-      response = await this.fetchFn(url);
+      response = await this.fetchFn(url, { signal: AbortSignal.timeout(10_000) });
     } catch (error) {
       return { ok: false, error: classifyFxNetworkError(error) };
     }
@@ -429,9 +433,11 @@ export class FxPoller {
 
     this.healthState = { ...this.healthState, status: 'polling' };
 
+    const run = this.generation;
     const fetchedAt = this.now();
     const result = await this.fetchJson(ER_API_URL);
 
+    if (this.stopped || run !== this.generation) return;
     if (!result.ok) {
       this.setError(result.error);
       if (result.error.kind === 'rate_limited') {
@@ -481,9 +487,11 @@ export class FxPoller {
       return;
     }
 
+    const run = this.generation;
     const fetchedAt = this.now();
     const result = await this.fetchJson(FRANKFURTER_URL);
 
+    if (this.stopped || run !== this.generation) return;
     if (!result.ok) {
       this.setError(result.error);
       if (!this.lastGoodRates) {
@@ -527,9 +535,11 @@ export class FxPoller {
       return;
     }
 
+    const run = this.generation;
     const fetchedAt = this.now();
     const result = await this.fetchJson(FRANKFURTER_URL);
 
+    if (this.stopped || run !== this.generation) return;
     if (!result.ok) {
       this.setCrossCheckUnavailable(result.error);
       return;

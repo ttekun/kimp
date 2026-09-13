@@ -194,7 +194,10 @@ describe('BitbankConnector', () => {
       },
     });
 
-    expect(onTicker).not.toHaveBeenCalled();
+    expect(onTicker).toHaveBeenCalledWith(
+      'BTC',
+      expect.objectContaining({ unavailable: true, status: 'down' }),
+    );
     expect(onBookUnusable).toHaveBeenCalledWith('BTC', 'one_sided');
 
     connector.stop();
@@ -223,7 +226,11 @@ describe('BitbankConnector', () => {
       message: bitbankWsEthFixture.message,
     });
 
-    expect(onTicker).not.toHaveBeenCalled();
+    expect(onTicker).toHaveBeenCalledWith(
+      'XRP',
+      expect.objectContaining({ unavailable: true, status: 'down' }),
+    );
+    onTicker.mockClear();
     expect(connector.isCoinSuppressed('XRP')).toBe(true);
 
     socket.emit('message', bitbankWsEthFixture);

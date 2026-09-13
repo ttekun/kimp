@@ -101,6 +101,7 @@ export function createBinanceBrowserClient(
 
   return {
     start: () => {
+      if (!stopped) return;
       stopped = false;
       backoffMs = INITIAL_BACKOFF_MS;
       connect();

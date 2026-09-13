@@ -18,7 +18,14 @@ export async function loadFxRates(options: FxBrowserOptions = {}): Promise<FxRat
   const fetchFn = options.fetchFn ?? fetch.bind(globalThis);
   const now = options.now ?? Date.now;
   const nowMs = now();
-  const storage = options.storage ?? (typeof localStorage === 'undefined' ? null : localStorage);
+  let storage = options.storage ?? null;
+  if (options.storage === undefined) {
+    try {
+      storage = globalThis.localStorage ?? null;
+    } catch {
+      /* Storage may be blocked. */
+    }
+  }
 
   if (storage) {
     const cached = readFxCache(storage, nowMs);
@@ -50,7 +57,7 @@ export async function loadFxRates(options: FxBrowserOptions = {}): Promise<FxRat
 
 async function fetchJson(fetchFn: typeof fetch, url: string): Promise<unknown | null> {
   try {
-    const response = await fetchFn(url);
+    const response = await fetchFn(url, { signal: AbortSignal.timeout(10_000) });
     if (!response.ok) {
       return null;
     }

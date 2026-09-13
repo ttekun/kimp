@@ -172,6 +172,7 @@ export class BinanceConnector {
   private lifetimeTimer: ReturnType<typeof setTimeout> | null = null;
   private currentBackoffMs = BINANCE_INITIAL_BACKOFF_MS;
   private stopped = true;
+  private generation = 0;
 
   private healthState: BinanceConnectorHealth = {
     status: 'disconnected',
@@ -194,14 +195,17 @@ export class BinanceConnector {
   }
 
   async start(): Promise<void> {
+    if (!this.stopped) return;
     this.stopped = false;
+    const run = ++this.generation;
     this.currentBackoffMs = BINANCE_INITIAL_BACKOFF_MS;
     await this.bootstrapFromRest();
-    this.connect();
+    if (run === this.generation && !this.stopped) this.connect();
   }
 
   stop(): void {
     this.stopped = true;
+    this.generation += 1;
     this.clearTimers();
     this.ws?.removeAllListeners();
     this.ws?.close();
@@ -210,11 +214,12 @@ export class BinanceConnector {
   }
 
   async bootstrapFromRest(): Promise<void> {
+    const run = this.generation;
     const url = buildBinanceRestTickerUrl();
 
     let response: Response;
     try {
-      response = await this.fetchFn(url);
+      response = await this.fetchFn(url, { signal: AbortSignal.timeout(10_000) });
     } catch (error) {
       const connectorError = classifyBinanceNetworkError(error);
       this.healthState = { ...this.healthState, lastError: connectorError };
@@ -248,6 +253,7 @@ export class BinanceConnector {
       return;
     }
 
+    if (run !== this.generation) return;
     const { tickers } = normalizeBinanceRestResponse(raw);
 
     for (const { coin, ticker } of tickers) {
@@ -268,12 +274,14 @@ export class BinanceConnector {
     this.ws = ws;
 
     ws.on('open', () => {
+      if (ws !== this.ws || this.stopped) return;
       this.currentBackoffMs = BINANCE_INITIAL_BACKOFF_MS;
       this.healthState = { ...this.healthState, status: 'connected', lastError: null };
       this.scheduleLifetimeReconnect();
     });
 
     ws.on('message', (data) => {
+      if (ws !== this.ws || this.stopped) return;
       this.handleMessage(data);
     });
 
@@ -347,6 +355,7 @@ export class BinanceConnector {
 
     this.clearTimers();
     this.ws = null;
+    ws.close();
 
     if (this.stopped) {
       this.healthState = { ...this.healthState, status: 'disconnected' };

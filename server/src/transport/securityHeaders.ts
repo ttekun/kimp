@@ -1,6 +1,6 @@
 /**
  * Browser-facing security headers for the aggregator (serves API + SPA).
- * CSP is same-origin only: the SPA never calls exchange APIs from the browser.
+ * CSP permits the public feeds used by the browser aggregator.
  */
 export const CONTENT_SECURITY_POLICY = [
   "default-src 'self'",
@@ -8,7 +8,7 @@ export const CONTENT_SECURITY_POLICY = [
   "style-src 'self'",
   "font-src 'self'",
   "img-src 'self' data:",
-  "connect-src 'self'",
+  "connect-src 'self' wss://api.upbit.com https://api.upbit.com wss://stream.binance.com wss://stream.binance.com:443 https://api.binance.com wss://stream.bitbank.cc https://stream.bitbank.cc https://open.er-api.com https://api.frankfurter.dev",
   "object-src 'none'",
   "base-uri 'self'",
   "frame-ancestors 'none'",

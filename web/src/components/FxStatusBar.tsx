@@ -1,3 +1,5 @@
+import { deriveFeedStatus, STALENESS_THRESHOLDS } from '@kimchi/core/snapshot';
+
 import { ThemeToggle } from './ui/ThemeToggle';
 import { deriveExchangeFeedStatus, deriveFxFeedStatus } from '../lib/feedStatus';
 import {
@@ -60,7 +62,16 @@ export function FxStatusBar({ snapshot, connectionStatus }: FxStatusBarProps) {
   const fxIsStale = fxStatus === 'stale';
   const usdDisplay = fxIsDown ? FX_EM_DASH : formatUsdKrw(usdKrw?.value);
   const jpyDisplay = fxIsDown ? FX_EM_DASH : formatJpyKrw(krwPerJpy);
-  const usdtDisplay = formatUsdtKrw(usdt?.value);
+  const usdtStatus =
+    usdt && snapshot
+      ? deriveFeedStatus(
+          usdt.fetchedAt,
+          snapshot.updatedAt,
+          STALENESS_THRESHOLDS.upbit.staleAfterMs,
+          STALENESS_THRESHOLDS.upbit.downAfterMs,
+        )
+      : 'down';
+  const usdtDisplay = usdtStatus === 'down' ? FX_EM_DASH : formatUsdtKrw(usdt?.value);
   const fiatMissing = fxIsDown || fxIsStale || usdDisplay === FX_EM_DASH;
   const jpyMissing = fxIsDown || fxIsStale || jpyDisplay === FX_EM_DASH;
 
@@ -77,10 +88,7 @@ export function FxStatusBar({ snapshot, connectionStatus }: FxStatusBarProps) {
             <span className="fx-bar__pair">JPY/KRW</span>
             <span className="fx-bar__value tabular-nums">{jpyDisplay}</span>
           </span>
-          <span
-            className="fx-bar__rate"
-            data-missing={usdtDisplay === FX_EM_DASH ? 'true' : undefined}
-          >
+          <span className="fx-bar__rate" data-missing={usdtStatus !== 'live' ? 'true' : undefined}>
             <span className="fx-bar__pair">USDT/KRW</span>
             <span className="fx-bar__value tabular-nums">{usdtDisplay}</span>
             <span className="fx-bar__hint">implied</span>

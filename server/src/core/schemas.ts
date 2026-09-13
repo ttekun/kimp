@@ -5,6 +5,7 @@ import { COIN_SYMBOLS } from './symbols.js';
 export const feedStatusSchema = z.enum(['live', 'stale', 'down']);
 
 const tickerBaseSchema = z.object({
+  unavailable: z.boolean().optional(),
   price: z.number(),
   ts: z.number().int().nonnegative(),
   status: feedStatusSchema,

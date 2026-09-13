@@ -160,6 +160,7 @@ export class UpbitConnector {
   private pingTimer: ReturnType<typeof setInterval> | null = null;
   private currentBackoffMs = UPBIT_INITIAL_BACKOFF_MS;
   private stopped = true;
+  private generation = 0;
 
   private healthState: UpbitConnectorHealth = {
     status: 'disconnected',
@@ -188,14 +189,17 @@ export class UpbitConnector {
   }
 
   async start(): Promise<void> {
+    if (!this.stopped) return;
     this.stopped = false;
+    const run = ++this.generation;
     this.currentBackoffMs = UPBIT_INITIAL_BACKOFF_MS;
     await this.bootstrapFromRest();
-    this.connect();
+    if (run === this.generation && !this.stopped) this.connect();
   }
 
   stop(): void {
     this.stopped = true;
+    this.generation += 1;
     this.clearTimers();
     this.ws?.removeAllListeners();
     this.ws?.close();
@@ -204,11 +208,12 @@ export class UpbitConnector {
   }
 
   async bootstrapFromRest(): Promise<void> {
+    const run = this.generation;
     const url = buildUpbitRestTickerUrl();
 
     let response: Response;
     try {
-      response = await this.fetchFn(url);
+      response = await this.fetchFn(url, { signal: AbortSignal.timeout(10_000) });
     } catch (error) {
       const connectorError = classifyUpbitNetworkError(error);
       this.healthState = { ...this.healthState, lastError: connectorError };
@@ -242,6 +247,7 @@ export class UpbitConnector {
       return;
     }
 
+    if (run !== this.generation) return;
     const { tickers, usdtRate } = normalizeUpbitRestResponse(raw);
 
     for (const { coin, ticker } of tickers) {
@@ -267,6 +273,7 @@ export class UpbitConnector {
     this.ws = ws;
 
     ws.on('open', () => {
+      if (ws !== this.ws || this.stopped) return;
       this.currentBackoffMs = UPBIT_INITIAL_BACKOFF_MS;
       this.healthState = { ...this.healthState, status: 'connected', lastError: null };
       ws.send(buildUpbitSubscribePayload());
@@ -274,6 +281,7 @@ export class UpbitConnector {
     });
 
     ws.on('message', (data) => {
+      if (ws !== this.ws || this.stopped) return;
       this.ingestRawMessage(data);
     });
 
@@ -352,6 +360,7 @@ export class UpbitConnector {
 
     this.clearTimers();
     this.ws = null;
+    ws.close();
 
     if (this.stopped) {
       this.healthState = { ...this.healthState, status: 'disconnected' };

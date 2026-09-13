@@ -83,7 +83,8 @@ export function computeKrwPerJpy(usdKrw: number, usdJpy: number): number | null 
     return null;
   }
 
-  return usdKrw / usdJpy;
+  const value = usdKrw / usdJpy;
+  return Number.isFinite(value) && value > 0 ? value : null;
 }
 
 /**
@@ -95,7 +96,7 @@ export function computeKrwPerJpy(usdKrw: number, usdJpy: number): number | null 
 export function computePremiumBinance(inputs: PremiumBinanceInputs): Premium | null {
   const { upbit, binance, usdKrw, computedAt } = inputs;
 
-  if (!isUsableRate(usdKrw)) {
+  if (!isUsableRate(usdKrw) || !isFinitePositive(upbit.price) || !isFinitePositive(binance.price)) {
     return null;
   }
 
@@ -120,7 +121,12 @@ export function computePremiumBinance(inputs: PremiumBinanceInputs): Premium | n
 export function computePremiumBitbank(inputs: PremiumBitbankInputs): Premium | null {
   const { upbit, bitbank, usdKrw, usdJpy, computedAt } = inputs;
 
-  if (!isUsableRate(usdKrw) || !isUsableRate(usdJpy)) {
+  if (
+    !isUsableRate(usdKrw) ||
+    !isUsableRate(usdJpy) ||
+    !isFinitePositive(upbit.price) ||
+    !isFinitePositive(bitbank.price)
+  ) {
     return null;
   }
 

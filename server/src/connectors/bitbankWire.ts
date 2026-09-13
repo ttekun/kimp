@@ -8,6 +8,8 @@ import {
   type BitbankWireTickerData,
 } from './bitbankSchemas.js';
 
+export { bitbankCircuitBreakWsMessageSchema } from './bitbankSchemas.js';
+
 export const BITBANK_SOCKET_IO_URL = 'wss://stream.bitbank.cc';
 
 const BITBANK_PAIR_TO_COIN = Object.fromEntries(
@@ -22,7 +24,7 @@ export type BitbankBookUnusableReason = 'one_sided' | 'crossed';
 
 export type BitbankTickerNormalizeResult =
   | { kind: 'ticker'; coin: CoinSymbol; ticker: BitbankTicker }
-  | { kind: 'book_unusable'; coin: CoinSymbol; reason: BitbankBookUnusableReason }
+  | { kind: 'book_unusable'; coin: CoinSymbol; reason: BitbankBookUnusableReason; ts: number }
   | null;
 
 export interface BitbankRestBootstrapResult {
@@ -30,11 +32,13 @@ export interface BitbankRestBootstrapResult {
 }
 
 export function resolveBitbankCoinFromPair(pair: string): CoinSymbol | null {
-  return BITBANK_PAIR_TO_COIN[pair] ?? null;
+  return Object.hasOwn(BITBANK_PAIR_TO_COIN, pair) ? BITBANK_PAIR_TO_COIN[pair]! : null;
 }
 
 function parseBitbankNumericString(value: string): number | null {
-  const parsed = Number.parseFloat(value);
+  const parsed = /^[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?$/.test(value)
+    ? Number(value)
+    : NaN;
   if (!Number.isFinite(parsed)) {
     return null;
   }
@@ -94,7 +98,7 @@ function normalizeWireTickerData(
   }
 
   if (book === 'one_sided' || book === 'crossed') {
-    return { kind: 'book_unusable', coin, reason: book };
+    return { kind: 'book_unusable', coin, reason: book, ts: data.timestamp };
   }
 
   const ticker = wireToBitbankTicker(book, data.timestamp);

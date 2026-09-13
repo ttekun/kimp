@@ -8,6 +8,7 @@ import { normalizeBinanceWsMessage } from '@kimchi/binance-wire';
 import { normalizeBitbankWsMessage } from '@kimchi/bitbank-wire';
 import { normalizeUpbitWireTicker } from '@kimchi/upbit-wire';
 import type { MarketSnapshot } from '@kimchi/server-types';
+import type { CoinSymbol } from './types';
 
 import { createBinanceBrowserClient } from './binanceBrowser';
 import { createBitbankBrowserClient } from './bitbankBrowser';
@@ -16,6 +17,7 @@ import { createUpbitBrowserClient } from './upbitBrowser';
 import type { ConnectionStatus } from '../store/marketStore';
 
 export const SNAPSHOT_PUBLISH_INTERVAL_MS = 1_000;
+export const FX_RETRY_INTERVAL_MS = 20 * 60 * 1_000;
 
 export interface ClientAggregator {
   start: () => void;
@@ -41,6 +43,39 @@ export function createClientAggregator(options: ClientAggregatorOptions): Client
   let publishTimer: ReturnType<typeof setInterval> | null = null;
   let stopped = true;
   let hasBeenLive = false;
+  let generation = 0;
+  let fxTimer: ReturnType<typeof setTimeout> | null = null;
+  const circuitBreaks = new Map<CoinSymbol, { active: boolean; ts: number }>();
+
+  let fxAttemptDay = -1;
+  let fxAttempts = 0;
+
+  const refreshFx = async (run: number): Promise<void> => {
+    const day = Math.floor(now() / 86_400_000);
+    if (day !== fxAttemptDay) {
+      fxAttemptDay = day;
+      fxAttempts = 0;
+    }
+    fxAttempts += 1;
+    let succeeded = false;
+    try {
+      const rates = await (options.loadFx ?? loadFxRates)();
+      if (stopped || generation !== run) return;
+      if (rates) {
+        snapshot = mergeFxRate(snapshot, 'usdKrw', rates.usdKrw, now());
+        snapshot = mergeFxRate(snapshot, 'usdJpy', rates.usdJpy, now());
+        succeeded = true;
+      }
+    } catch {
+      // Retry transient failures without leaving an unhandled promise rejection.
+    }
+    if (stopped || generation !== run) return;
+    const dayMs = 24 * 60 * 60 * 1_000;
+    const delay = succeeded || fxAttempts >= 2 ? dayMs - (now() % dayMs) : FX_RETRY_INTERVAL_MS;
+    fxTimer = setTimeout(() => {
+      void refreshFx(run);
+    }, delay);
+  };
   const connected = { upbit: false, binance: false, bitbank: false };
 
   const setStatus = (): void => {
@@ -64,6 +99,7 @@ export function createClientAggregator(options: ClientAggregatorOptions): Client
 
   const upbit = (options.createUpbit ?? createUpbitBrowserClient)({
     onMessage: (raw) => {
+      if (stopped) return;
       const normalized = normalizeUpbitWireTicker(raw);
       if (!normalized) {
         return;
@@ -75,6 +111,7 @@ export function createClientAggregator(options: ClientAggregatorOptions): Client
       }
     },
     onConnectionChange: (isConnected) => {
+      if (stopped) return;
       connected.upbit = isConnected;
       setStatus();
     },
@@ -82,6 +119,7 @@ export function createClientAggregator(options: ClientAggregatorOptions): Client
 
   const binance = (options.createBinance ?? createBinanceBrowserClient)({
     onMessage: (raw) => {
+      if (stopped) return;
       const normalized = normalizeBinanceWsMessage(raw);
       if (!normalized) {
         return;
@@ -89,6 +127,7 @@ export function createClientAggregator(options: ClientAggregatorOptions): Client
       snapshot = mergeTicker(snapshot, 'binance', normalized.coin, normalized.ticker, now());
     },
     onConnectionChange: (isConnected) => {
+      if (stopped) return;
       connected.binance = isConnected;
       setStatus();
     },
@@ -96,16 +135,42 @@ export function createClientAggregator(options: ClientAggregatorOptions): Client
 
   const bitbank = (options.createBitbank ?? createBitbankBrowserClient)({
     onTickerMessage: (raw) => {
+      if (stopped) return;
       const normalized = normalizeBitbankWsMessage(raw);
-      if (normalized?.kind !== 'ticker') {
+      if (!normalized) {
         return;
       }
-      snapshot = mergeTicker(snapshot, 'bitbank', normalized.coin, normalized.ticker, now());
+      if (normalized.kind === 'book_unusable') {
+        snapshot = mergeTicker(
+          snapshot,
+          'bitbank',
+          normalized.coin,
+          { price: 0, ts: normalized.ts, status: 'down', unavailable: true },
+          now(),
+        );
+      } else if (
+        !circuitBreaks.get(normalized.coin)?.active &&
+        normalized.ticker.ts >= (circuitBreaks.get(normalized.coin)?.ts ?? 0)
+      ) {
+        snapshot = mergeTicker(snapshot, 'bitbank', normalized.coin, normalized.ticker, now());
+      }
     },
-    onCircuitBreak: () => {
-      // Circuit-break rooms only; mid-price already omitted when the book is unusable.
+    onCircuitBreak: (coin, active, ts) => {
+      if (stopped || ts < (circuitBreaks.get(coin)?.ts ?? -1)) return;
+      circuitBreaks.set(coin, { active, ts });
+      if (active) {
+        const currentTs = snapshot.coins[coin].bitbank?.ts ?? ts;
+        snapshot = mergeTicker(
+          snapshot,
+          'bitbank',
+          coin,
+          { price: 0, ts: Math.max(ts, currentTs), status: 'down', unavailable: true },
+          now(),
+        );
+      }
     },
     onConnectionChange: (isConnected) => {
+      if (stopped) return;
       connected.bitbank = isConnected;
       setStatus();
     },
@@ -113,20 +178,17 @@ export function createClientAggregator(options: ClientAggregatorOptions): Client
 
   return {
     start: () => {
+      if (!stopped) return;
       stopped = false;
+      generation += 1;
+      connected.upbit = connected.binance = connected.bitbank = false;
+      circuitBreaks.clear();
       hasBeenLive = false;
       snapshot = createEmptySnapshot(now());
       options.onStatusChange('connecting');
       options.onSnapshot(snapshot);
 
-      const loadFx = options.loadFx ?? loadFxRates;
-      void loadFx().then((rates) => {
-        if (stopped || !rates) {
-          return;
-        }
-        snapshot = mergeFxRate(snapshot, 'usdKrw', rates.usdKrw, now());
-        snapshot = mergeFxRate(snapshot, 'usdJpy', rates.usdJpy, now());
-      });
+      void refreshFx(generation);
 
       upbit.start();
       binance.start();
@@ -136,6 +198,9 @@ export function createClientAggregator(options: ClientAggregatorOptions): Client
     },
     stop: () => {
       stopped = true;
+      generation += 1;
+      if (fxTimer !== null) clearTimeout(fxTimer);
+      fxTimer = null;
       if (publishTimer !== null) {
         clearInterval(publishTimer);
         publishTimer = null;

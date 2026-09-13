@@ -94,8 +94,8 @@ export function buildPremiumTableRows(
 
     return {
       symbol,
-      targetPrice: target?.price,
-      targetKrw: targetKrwForPair(pair, coin, snapshot),
+      targetPrice: target?.unavailable ? undefined : target?.price,
+      targetKrw: target?.unavailable ? undefined : targetKrwForPair(pair, coin, snapshot),
       upbitPrice: coin.upbit?.price,
       change24hPct: coin.upbit?.change24hPct,
       volume24hKrw: coin.upbit?.volume24hKrw,

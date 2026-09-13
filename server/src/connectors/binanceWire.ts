@@ -23,7 +23,7 @@ export interface BinanceRestBootstrapResult {
 }
 
 function parseBinancePrice(value: string): number | null {
-  const price = Number.parseFloat(value);
+  const price = /^[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?$/.test(value) ? Number(value) : NaN;
   if (!Number.isFinite(price) || price <= 0) {
     return null;
   }
@@ -43,7 +43,7 @@ function wireToBinanceTicker(price: number, ts: number): BinanceTicker | null {
 }
 
 function resolveCoinFromSymbol(symbol: string): CoinSymbol | null {
-  return BINANCE_SYMBOL_TO_COIN[symbol] ?? null;
+  return Object.hasOwn(BINANCE_SYMBOL_TO_COIN, symbol) ? BINANCE_SYMBOL_TO_COIN[symbol]! : null;
 }
 
 function normalizeMiniTickerData(data: BinanceMiniTickerData): {

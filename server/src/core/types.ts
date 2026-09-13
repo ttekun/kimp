@@ -3,6 +3,8 @@ import type { CoinSymbol } from './symbols.js';
 export type FeedStatus = 'live' | 'stale' | 'down';
 
 export interface TickerBase {
+  /** Explicit feed invalidation; remains down until a usable ticker replaces it. */
+  unavailable?: boolean;
   price: number;
   ts: number;
   status: FeedStatus;

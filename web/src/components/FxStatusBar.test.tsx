@@ -136,3 +136,19 @@ describe('FxStatusBar', () => {
     expect(screen.getByRole('status').textContent).toMatch(/polling/i);
   });
 });
+
+it('ages the streamed implied rate independently from daily fiat FX', () => {
+  const snapshot: MarketSnapshot = {
+    updatedAt: NOW,
+    coins: liveCoins(),
+    fx: {
+      usdKrw: rate(),
+      usdJpy: rate({ value: 150 }),
+      usdtKrwImplied: rate({ value: 1414.8, fetchedAt: NOW - 60_001, source: 'upbit' }),
+    },
+  };
+  render(<FxStatusBar snapshot={snapshot} connectionStatus="live" />);
+  expect(screen.queryByText('1,414.8')).toBeNull();
+  expect(screen.getByText('1,414.9')).toBeTruthy();
+  expect(screen.getByText('USDT/KRW').parentElement?.getAttribute('data-missing')).toBe('true');
+});

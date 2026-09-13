@@ -77,7 +77,7 @@ export function createUpbitBrowserClient(
         return;
       }
       void decodeUpbitPayload(event.data).then((raw) => {
-        if (raw !== null) {
+        if (!stopped && socket === next && raw !== null) {
           callbacks.onMessage(raw);
         }
       });
@@ -99,6 +99,7 @@ export function createUpbitBrowserClient(
 
   return {
     start: () => {
+      if (!stopped) return;
       stopped = false;
       backoffMs = INITIAL_BACKOFF_MS;
       connect();

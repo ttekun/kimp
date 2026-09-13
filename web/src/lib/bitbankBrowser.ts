@@ -2,6 +2,7 @@ import { io, type Socket } from 'socket.io-client';
 
 import {
   BITBANK_SOCKET_IO_URL,
+  bitbankCircuitBreakWsMessageSchema,
   buildBitbankJoinRooms,
   isBitbankCircuitBreakActive,
   normalizeBitbankWsMessage,
@@ -15,7 +16,7 @@ const MAX_BACKOFF_MS = 30_000;
 
 export interface BitbankBrowserCallbacks {
   onTickerMessage: (raw: unknown) => void;
-  onCircuitBreak: (coin: CoinSymbol, active: boolean) => void;
+  onCircuitBreak: (coin: CoinSymbol, active: boolean, ts: number) => void;
   onConnectionChange: (connected: boolean) => void;
 }
 
@@ -78,15 +79,13 @@ export function createBitbankBrowserClient(
         return;
       }
       callbacks.onTickerMessage(payload);
-      const record = payload as { room_name?: unknown; message?: { data?: { mode?: unknown } } };
-      if (typeof record.room_name === 'string') {
-        const pair = pairFromCircuitBreakRoom(record.room_name);
-        if (pair !== null) {
-          const coin = resolveBitbankCoinFromPair(pair);
-          const mode = record.message?.data?.mode;
-          if (coin && typeof mode === 'string') {
-            callbacks.onCircuitBreak(coin, isBitbankCircuitBreakActive(mode));
-          }
+      const parsed = bitbankCircuitBreakWsMessageSchema.safeParse(payload);
+      if (parsed.success) {
+        const pair = pairFromCircuitBreakRoom(parsed.data.room_name);
+        const coin = pair === null ? null : resolveBitbankCoinFromPair(pair);
+        if (coin) {
+          const data = parsed.data.message.data;
+          callbacks.onCircuitBreak(coin, isBitbankCircuitBreakActive(data.mode), data.timestamp);
         }
       }
     });
@@ -116,6 +115,7 @@ export function createBitbankBrowserClient(
 
   return {
     start: () => {
+      if (!stopped) return;
       stopped = false;
       backoffMs = INITIAL_BACKOFF_MS;
       connect();

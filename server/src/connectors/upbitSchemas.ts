@@ -9,10 +9,10 @@ export const upbitWireTickerSchema = z
   .object({
     market: z.string().min(1).optional(),
     code: z.string().min(1).optional(),
-    trade_price: z.number(),
+    trade_price: z.number().positive(),
     signed_change_rate: z.number(),
     acc_trade_price_24h: z.number(),
-    timestamp: z.number().int().nonnegative(),
+    timestamp: z.number().int().nonnegative().max(8_640_000_000_000_000),
     trade_date: z.string().optional(),
   })
   .refine((wire) => wire.market !== undefined || wire.code !== undefined, {

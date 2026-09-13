@@ -79,7 +79,9 @@ export function normalizeUpbitWireTicker(raw: unknown): UpbitNormalizedMessage |
     return rate ? { kind: 'usdt_rate', rate } : null;
   }
 
-  const coin = UPBIT_MARKET_TO_COIN[marketCode];
+  const coin = Object.hasOwn(UPBIT_MARKET_TO_COIN, marketCode)
+    ? UPBIT_MARKET_TO_COIN[marketCode]
+    : undefined;
   if (!coin) {
     return null;
   }

@@ -162,9 +162,12 @@ export class BitbankConnector {
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private currentBackoffMs = BITBANK_INITIAL_BACKOFF_MS;
   private stopped = true;
+  private generation = 0;
   private disconnectHandled = false;
 
   private readonly circuitBreakActive = new Map<CoinSymbol, boolean>();
+  private readonly circuitBreakTimestamps = new Map<CoinSymbol, number>();
+  private readonly latestTickerTimestamps = new Map<CoinSymbol, number>();
   private readonly marketStatusDown = new Map<CoinSymbol, boolean>();
 
   private healthState: BitbankConnectorHealth = {
@@ -193,28 +196,36 @@ export class BitbankConnector {
   }
 
   async start(): Promise<void> {
+    if (!this.stopped) return;
     this.stopped = false;
+    const run = ++this.generation;
     this.currentBackoffMs = BITBANK_INITIAL_BACKOFF_MS;
     await this.bootstrapFromRest();
-    this.connect();
+    if (run === this.generation && !this.stopped) this.connect();
   }
 
   stop(): void {
     this.stopped = true;
+    this.generation += 1;
     this.clearReconnectTimer();
     this.clearSocket();
     this.healthState = { ...this.healthState, status: 'disconnected' };
   }
 
   async bootstrapFromRest(): Promise<void> {
+    const run = this.generation;
     await this.bootstrapMarketStatus();
+    if (run !== this.generation) return;
     await this.bootstrapTickers();
   }
 
   private async bootstrapMarketStatus(): Promise<void> {
+    const run = this.generation;
     let response: Response;
     try {
-      response = await this.fetchFn(BITBANK_REST_MARKET_STATUS_URL);
+      response = await this.fetchFn(BITBANK_REST_MARKET_STATUS_URL, {
+        signal: AbortSignal.timeout(10_000),
+      });
     } catch (error) {
       const connectorError = classifyBitbankNetworkError(error);
       this.healthState = { ...this.healthState, lastError: connectorError };
@@ -248,6 +259,7 @@ export class BitbankConnector {
       return;
     }
 
+    if (run !== this.generation) return;
     this.applyMarketStatusBootstrap(raw);
   }
 
@@ -268,9 +280,12 @@ export class BitbankConnector {
   }
 
   private async bootstrapTickers(): Promise<void> {
+    const run = this.generation;
     let response: Response;
     try {
-      response = await this.fetchFn(BITBANK_REST_TICKERS_URL);
+      response = await this.fetchFn(BITBANK_REST_TICKERS_URL, {
+        signal: AbortSignal.timeout(10_000),
+      });
     } catch (error) {
       const connectorError = classifyBitbankNetworkError(error);
       this.healthState = { ...this.healthState, lastError: connectorError };
@@ -304,6 +319,7 @@ export class BitbankConnector {
       return;
     }
 
+    if (run !== this.generation) return;
     const { tickers } = normalizeBitbankRestTickersResponse(raw);
 
     for (const { coin, ticker } of tickers) {
@@ -311,6 +327,10 @@ export class BitbankConnector {
         continue;
       }
 
+      this.latestTickerTimestamps.set(
+        coin,
+        Math.max(ticker.ts, this.latestTickerTimestamps.get(coin) ?? 0),
+      );
       this.callbacks.onTicker(coin, ticker);
       this.healthState = { ...this.healthState, lastTickAt: ticker.ts };
     }
@@ -389,13 +409,26 @@ export class BitbankConnector {
 
     if (normalized.kind === 'book_unusable') {
       this.callbacks.onBookUnusable?.(normalized.coin, normalized.reason);
+      this.callbacks.onTicker(normalized.coin, {
+        price: 0,
+        ts: normalized.ts,
+        status: 'down',
+        unavailable: true,
+      });
       return;
     }
 
-    if (this.isCoinSuppressed(normalized.coin)) {
+    if (
+      this.isCoinSuppressed(normalized.coin) ||
+      normalized.ticker.ts < (this.circuitBreakTimestamps.get(normalized.coin) ?? 0)
+    ) {
       return;
     }
 
+    this.latestTickerTimestamps.set(
+      normalized.coin,
+      Math.max(normalized.ticker.ts, this.latestTickerTimestamps.get(normalized.coin) ?? 0),
+    );
     this.callbacks.onTicker(normalized.coin, normalized.ticker);
     this.healthState = { ...this.healthState, lastTickAt: normalized.ticker.ts };
   }
@@ -411,7 +444,19 @@ export class BitbankConnector {
       return;
     }
 
-    this.circuitBreakActive.set(coin, isBitbankCircuitBreakActive(message.message.data.mode));
+    const ts = message.message.data.timestamp;
+    if (ts < (this.circuitBreakTimestamps.get(coin) ?? -1)) return;
+    this.circuitBreakTimestamps.set(coin, ts);
+    const active = isBitbankCircuitBreakActive(message.message.data.mode);
+    this.circuitBreakActive.set(coin, active);
+    if (active) {
+      this.callbacks.onTicker(coin, {
+        price: 0,
+        ts: Math.max(ts, this.latestTickerTimestamps.get(coin) ?? ts),
+        status: 'down',
+        unavailable: true,
+      });
+    }
   }
 
   private recordMalformed(error: BitbankConnectorError): void {
