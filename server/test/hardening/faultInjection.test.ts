@@ -269,6 +269,26 @@ describe('fault injection — snapshot invariant via store + HTTP', () => {
     expect(snapshot.coins.BTC.premiumBitbank).toBeUndefined();
   });
 
+  it('ages a real rate that carries observedAt (not just fetchedAt)', () => {
+    // Real er-api/Frankfurter rates always set observedAt; staleness is judged from it
+    // (snapshot.ts deriveFxStatus), so this fault must age it too or the injection is a no-op.
+    const store = createAggregatorSnapshotStore(BASE_TS);
+    store.onFxRates({
+      usdKrw: makeRate(BASE_TS, { observedAt: BASE_TS }),
+      usdJpy: makeRate(BASE_TS, { value: USD_JPY, observedAt: BASE_TS }),
+    });
+    for (const coin of COIN_SYMBOLS) {
+      store.onUpbitTicker(coin, makeUpbit(BASE_TS));
+      store.onBinanceTicker(coin, makeBinance(BASE_TS));
+    }
+    const fxStub = { stop: vi.fn() };
+
+    applyAgedFx(store, { fx: fxStub } as never, STALENESS_THRESHOLDS.fx.staleAfterMs + 1);
+    refreshFeeds(store, Date.now(), { upbit: true, binance: true, bitbank: true });
+
+    expect(store.getSnapshot().coins.BTC.premiumBinance?.status).toBe('stale');
+  });
+
   it('clock skew > 30s marks premiums stale without omitting (both legs still live)', () => {
     const store = createAggregatorSnapshotStore(BASE_TS);
     seedLive(store, BASE_TS);

@@ -78,8 +78,10 @@ export function deriveExchangeFeedStatus(
 }
 
 /**
- * Daily FX feed: `Rate` has no `status`. Age is `snapshot.updatedAt - fetchedAt`
- * with the same 26h / 78h exclusive thresholds as the aggregator.
+ * Daily FX feed: `Rate` has no `status`. Age is `snapshot.updatedAt - (observedAt ?? fetchedAt)`
+ * with the same 26h / 78h exclusive thresholds as the aggregator. `observedAt` is the
+ * provider's publication instant, so a freshly-fetched but not-yet-updated response
+ * still reads as stale/old rather than "just fetched".
  * Missing usdKrw (and missing usdJpy when that rate is present) never looks live.
  */
 export function deriveFxFeedStatus(snapshot: MarketSnapshot | null): FeedStatus {
@@ -100,7 +102,12 @@ export function deriveFxFeedStatus(snapshot: MarketSnapshot | null): FeedStatus 
   }
 
   const statuses = rates.map((rate) =>
-    deriveFeedStatus(rate.fetchedAt, snapshot.updatedAt, FX_STALE_AFTER_MS, FX_DOWN_AFTER_MS),
+    deriveFeedStatus(
+      rate.observedAt ?? rate.fetchedAt,
+      snapshot.updatedAt,
+      FX_STALE_AFTER_MS,
+      FX_DOWN_AFTER_MS,
+    ),
   );
 
   return worstFeedStatus(statuses);

@@ -14,7 +14,7 @@ describe('createClientAggregator', () => {
 
     const aggregator = createClientAggregator({
       now: () => 1_000,
-      loadFx: async () => null,
+      createFx: () => ({ start: () => undefined, stop: () => undefined }),
       createUpbit: (callbacks) => {
         upbitConnected = callbacks.onConnectionChange;
         return { start: () => undefined, stop: () => undefined };

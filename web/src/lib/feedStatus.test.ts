@@ -116,6 +116,15 @@ describe('deriveFxFeedStatus', () => {
     });
     expect(deriveFxFeedStatus(mixed)).toBe('stale');
   });
+
+  it('anchors staleness on observedAt, not fetchedAt: a freshly-fetched old rate is not live', () => {
+    const freshlyFetchedButOld = snapshot({
+      fx: {
+        usdKrw: rate({ fetchedAt: NOW, observedAt: NOW - FX_STALE_AFTER_MS - 1 }),
+      },
+    });
+    expect(deriveFxFeedStatus(freshlyFetchedButOld)).toBe('stale');
+  });
 });
 
 describe('deriveExchangeFeedStatus', () => {

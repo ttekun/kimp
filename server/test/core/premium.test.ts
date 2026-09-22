@@ -342,3 +342,38 @@ describe('computePremiumBitbank (Pair B)', () => {
     expect(premium!.pct).toBeCloseTo(-0.051394297058060534, 10);
   });
 });
+
+describe('diagnostic regression: 2026-09-22 kimchi premium mismatch', () => {
+  /**
+   * Reproduces the reported ~1pp premium gap by changing only the USD/KRW rate,
+   * confirming the discrepancy was an FX-input problem, not a formula bug.
+   * Observations were not synchronized; this is a diagnostic reproduction, not
+   * live market data. See the task write-up for full context.
+   */
+  const UPBIT_BTC_KRW = 115_232_000;
+  const BINANCE_BTC_USDT = 85_547;
+
+  it('reproduces -2.08194% with the app-observed USD/KRW rate', () => {
+    const premium = computePremiumBinance({
+      upbit: makeUpbit(UPBIT_BTC_KRW),
+      binance: makeBinance(BINANCE_BTC_USDT),
+      usdKrw: makeRate(1375.642214),
+      computedAt: COMPUTED_AT,
+    });
+
+    expect(premium).not.toBeNull();
+    expect(premium!.pct).toBeCloseTo(-2.08194, 4);
+  });
+
+  it('reproduces -1.02754% with only the USD/KRW rate changed', () => {
+    const premium = computePremiumBinance({
+      upbit: makeUpbit(UPBIT_BTC_KRW),
+      binance: makeBinance(BINANCE_BTC_USDT),
+      usdKrw: makeRate(1360.98688),
+      computedAt: COMPUTED_AT,
+    });
+
+    expect(premium).not.toBeNull();
+    expect(premium!.pct).toBeCloseTo(-1.02754, 4);
+  });
+});

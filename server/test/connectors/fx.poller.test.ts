@@ -6,7 +6,9 @@ import {
   FX_429_RETRY_DELAY_MS,
   FX_CROSS_CHECK_DELAY_MS,
   FX_DAILY_FETCH_BUDGET,
+  FX_LATE_PROVIDER_RETRY_MS,
   FX_MIN_PRIMARY_INTERVAL_MS,
+  FX_NEXT_UPDATE_GRACE_MS,
   FxPoller,
 } from '../../src/connectors/fx.js';
 import {
@@ -284,12 +286,18 @@ describe('FxPoller', () => {
     expect(poller.getHealth().fetchCountToday).toBe(2);
     expect(poller.getHealth().totalFetches).toBe(2);
 
-    // Primary is scheduled max(next_update, now+23h); advance the remaining time to that slot.
-    await vi.advanceTimersByTimeAsync(FX_MIN_PRIMARY_INTERVAL_MS - FX_CROSS_CHECK_DELAY_MS);
+    // erApiFixture's time_next_update_unix (2026-08-17T00:23:41Z) is ~12h24m after BASE_TIME —
+    // sooner than the 23h floor — so the next primary poll must land there (plus grace),
+    // not 23h later. Forcing the 23h floor here is the exact bug: it would miss the
+    // provider's real update window and keep serving the pre-update rate for a full extra day.
+    const nextUpdateMs = erApiFixture.time_next_update_unix * 1_000;
+    await vi.advanceTimersByTimeAsync(nextUpdateMs - BASE_TIME + FX_NEXT_UPDATE_GRACE_MS);
+    // The re-poll (fetch #3) and its cross-check (fetch #4) both land within this advance
+    // (the cross-check follows only FX_CROSS_CHECK_DELAY_MS behind), well before the 23h floor.
     await vi.waitFor(() => {
-      // totalFetches avoids UTC-midnight reset of fetchCountToday during the 23h advance
-      expect(poller.getHealth().totalFetches).toBe(3);
+      expect(poller.getHealth().totalFetches).toBe(4);
     });
+    expect(Date.now()).toBeLessThan(BASE_TIME + FX_MIN_PRIMARY_INTERVAL_MS);
 
     poller.stop();
   });
@@ -439,5 +447,156 @@ describe('FxPoller', () => {
     expect(health.lastError?.message).toMatch(/cross-check unavailable/i);
 
     poller.stop();
+  });
+
+  describe('post-midnight scheduling and seed resume', () => {
+    /** A fetch just before midnight whose next_update lands shortly after midnight. */
+    const preMidnightFixture = {
+      ...erApiFixture,
+      time_last_update_unix: Date.parse('2026-08-16T23:58:00.000Z') / 1_000,
+      time_next_update_unix: Date.parse('2026-08-17T00:30:00.000Z') / 1_000,
+    };
+
+    it('re-polls shortly after a pre-midnight fetch instead of waiting a full extra day', async () => {
+      vi.setSystemTime(Date.parse('2026-08-16T23:58:00.000Z'));
+      const fetchFn = createRoutingFetch({
+        [ER_API_URL]: okJson(preMidnightFixture),
+        [FRANKFURTER_URL]: okJson(frankfurterFixture),
+      });
+
+      const poller = new FxPoller({ fetchFn, now: () => Date.now() });
+      await poller.start();
+      await vi.advanceTimersByTimeAsync(FX_CROSS_CHECK_DELAY_MS);
+      expect(poller.getHealth().totalFetches).toBe(2);
+
+      const nextPollAt = poller.getNextPrimaryPollAt();
+      expect(nextPollAt).not.toBeNull();
+      // Must be scheduled shortly after the provider's real next update (~00:30), not
+      // pushed out to ~23:58 the next day by the daily floor.
+      expect(nextPollAt!).toBeLessThan(Date.parse('2026-08-17T01:00:00.000Z'));
+      expect(nextPollAt!).toBeGreaterThan(Date.parse('2026-08-17T00:30:00.000Z'));
+
+      poller.stop();
+    });
+
+    it('retries soon (not the 23h floor) when the provider is late: next_update already passed but the payload has not rolled over', async () => {
+      // time_next_update_unix is already in the past relative to BASE_TIME, and
+      // time_last_update_unix is still yesterday's — the provider hasn't published yet.
+      const lateProviderFixture = {
+        ...erApiFixture,
+        time_last_update_unix: Date.parse('2026-08-15T00:02:31.000Z') / 1_000,
+        time_next_update_unix: Date.parse('2026-08-16T00:23:41.000Z') / 1_000,
+      };
+      const fetchFn = createRoutingFetch({
+        [ER_API_URL]: okJson(lateProviderFixture),
+        [FRANKFURTER_URL]: okJson(frankfurterFixture),
+      });
+
+      const poller = new FxPoller({ fetchFn, now: () => Date.now() });
+      await poller.start();
+
+      const nextPollAt = poller.getNextPrimaryPollAt();
+      expect(nextPollAt).toBe(BASE_TIME + FX_LATE_PROVIDER_RETRY_MS);
+      expect(nextPollAt!).toBeLessThan(BASE_TIME + FX_MIN_PRIMARY_INTERVAL_MS);
+
+      poller.stop();
+    });
+
+    it('resumes from a seed without fetching while its schedule is still in the future', async () => {
+      const fetchFn = createRoutingFetch({
+        [ER_API_URL]: okJson(erApiFixture),
+        [FRANKFURTER_URL]: okJson(frankfurterFixture),
+      });
+      const onRates = vi.fn();
+      const seedRates = normalizeErApiResponseForSeed();
+      const nextPrimaryPollAt = BASE_TIME + 60 * 60 * 1_000;
+
+      const poller = new FxPoller({
+        fetchFn,
+        now: () => Date.now(),
+        onRates,
+        seed: { rates: seedRates, fromPrimary: true, nextPrimaryPollAt },
+      });
+      await poller.start();
+
+      expect(fetchFn).not.toHaveBeenCalled();
+      expect(onRates).toHaveBeenCalledWith(seedRates);
+      expect(poller.getHealth().status).toBe('ok');
+      expect(poller.getNextPrimaryPollAt()).toBe(nextPrimaryPollAt);
+
+      await vi.advanceTimersByTimeAsync(60 * 60 * 1_000);
+      await vi.waitFor(() => {
+        expect(fetchFn).toHaveBeenCalled();
+      });
+
+      poller.stop();
+    });
+
+    it('fetches immediately when the seed schedule has already passed', async () => {
+      const fetchFn = createRoutingFetch({
+        [ER_API_URL]: okJson(erApiFixture),
+        [FRANKFURTER_URL]: okJson(frankfurterFixture),
+      });
+      const seedRates = normalizeErApiResponseForSeed();
+
+      const poller = new FxPoller({
+        fetchFn,
+        now: () => Date.now(),
+        seed: { rates: seedRates, fromPrimary: true, nextPrimaryPollAt: BASE_TIME - 1 },
+      });
+      await poller.start();
+
+      expect(fetchFn).toHaveBeenCalled();
+
+      poller.stop();
+    });
+
+    function normalizeErApiResponseForSeed() {
+      return {
+        usdKrw: { value: 1414.860465, fetchedAt: BASE_TIME, source: 'er-api', ratesDate: '2026-08-16' },
+        usdJpy: { value: 159.225847, fetchedAt: BASE_TIME, source: 'er-api', ratesDate: '2026-08-16' },
+      };
+    }
+
+    it('ignores an in-flight fetch from a previous generation after stop-then-start', async () => {
+      let resolveFirst!: (value: unknown) => void;
+      const fetchFn = vi
+        .fn()
+        .mockImplementationOnce(
+          () =>
+            new Promise((resolve) => {
+              resolveFirst = resolve;
+            }),
+        )
+        .mockImplementation(async () => ({
+          ok: true,
+          status: 200,
+          json: async () => erApiFixture,
+          text: async () => JSON.stringify(erApiFixture),
+        }));
+      const onRates = vi.fn();
+
+      const poller = new FxPoller({ fetchFn: fetchFn as unknown as typeof fetch, now: () => Date.now(), onRates });
+      const started = poller.start();
+      poller.stop();
+      poller.start();
+
+      resolveFirst({
+        ok: true,
+        status: 200,
+        json: async () => ({ ...erApiFixture, rates: { ...erApiFixture.rates, KRW: 1 } }),
+        text: async () => '',
+      });
+      await started;
+
+      await vi.waitFor(() => expect(onRates).toHaveBeenCalled());
+      // Only the post-restart fetch's rates should ever reach onRates — the stale
+      // first-generation response (KRW: 1) must never overwrite it.
+      expect(onRates).not.toHaveBeenCalledWith(
+        expect.objectContaining({ usdKrw: expect.objectContaining({ value: 1 }) }),
+      );
+
+      poller.stop();
+    });
   });
 });

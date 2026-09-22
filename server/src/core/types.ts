@@ -26,9 +26,18 @@ export type Ticker = UpbitTicker | BinanceTicker | BitbankTicker;
 
 export interface Rate {
   value: number;
+  /** Local wall-clock time this rate was fetched/observed by this process. */
   fetchedAt: number;
   source: string;
   ratesDate: string;
+  /**
+   * Provider-stated publication instant (ms), when known (e.g. er-api's
+   * `time_last_update_unix`). Freshness/staleness must be judged against this,
+   * not `fetchedAt` — otherwise a freshly-fetched but not-yet-updated provider
+   * response reads as "just fetched" instead of "still yesterday's rate".
+   * Falls back to `fetchedAt` when the provider gives no exact instant.
+   */
+  observedAt?: number;
 }
 
 export interface PremiumInputTimestamps {

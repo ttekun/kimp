@@ -12,12 +12,11 @@ import type { CoinSymbol } from './types';
 
 import { createBinanceBrowserClient } from './binanceBrowser';
 import { createBitbankBrowserClient } from './bitbankBrowser';
-import { loadFxRates } from './fxBrowser';
+import { createFxBrowserClient } from './fxBrowser';
 import { createUpbitBrowserClient } from './upbitBrowser';
 import type { ConnectionStatus } from '../store/marketStore';
 
 export const SNAPSHOT_PUBLISH_INTERVAL_MS = 1_000;
-export const FX_RETRY_INTERVAL_MS = 20 * 60 * 1_000;
 
 export interface ClientAggregator {
   start: () => void;
@@ -31,7 +30,7 @@ export interface ClientAggregatorHandlers {
 
 export interface ClientAggregatorOptions extends ClientAggregatorHandlers {
   now?: () => number;
-  loadFx?: typeof loadFxRates;
+  createFx?: typeof createFxBrowserClient;
   createUpbit?: typeof createUpbitBrowserClient;
   createBinance?: typeof createBinanceBrowserClient;
   createBitbank?: typeof createBitbankBrowserClient;
@@ -43,39 +42,19 @@ export function createClientAggregator(options: ClientAggregatorOptions): Client
   let publishTimer: ReturnType<typeof setInterval> | null = null;
   let stopped = true;
   let hasBeenLive = false;
-  let generation = 0;
-  let fxTimer: ReturnType<typeof setTimeout> | null = null;
   const circuitBreaks = new Map<CoinSymbol, { active: boolean; ts: number }>();
 
-  let fxAttemptDay = -1;
-  let fxAttempts = 0;
-
-  const refreshFx = async (run: number): Promise<void> => {
-    const day = Math.floor(now() / 86_400_000);
-    if (day !== fxAttemptDay) {
-      fxAttemptDay = day;
-      fxAttempts = 0;
-    }
-    fxAttempts += 1;
-    let succeeded = false;
-    try {
-      const rates = await (options.loadFx ?? loadFxRates)();
-      if (stopped || generation !== run) return;
-      if (rates) {
+  const fx = (options.createFx ?? createFxBrowserClient)(
+    {
+      onRates: (rates) => {
+        if (stopped) return;
         snapshot = mergeFxRate(snapshot, 'usdKrw', rates.usdKrw, now());
         snapshot = mergeFxRate(snapshot, 'usdJpy', rates.usdJpy, now());
-        succeeded = true;
-      }
-    } catch {
-      // Retry transient failures without leaving an unhandled promise rejection.
-    }
-    if (stopped || generation !== run) return;
-    const dayMs = 24 * 60 * 60 * 1_000;
-    const delay = succeeded || fxAttempts >= 2 ? dayMs - (now() % dayMs) : FX_RETRY_INTERVAL_MS;
-    fxTimer = setTimeout(() => {
-      void refreshFx(run);
-    }, delay);
-  };
+      },
+    },
+    { now },
+  );
+
   const connected = { upbit: false, binance: false, bitbank: false };
 
   const setStatus = (): void => {
@@ -180,7 +159,6 @@ export function createClientAggregator(options: ClientAggregatorOptions): Client
     start: () => {
       if (!stopped) return;
       stopped = false;
-      generation += 1;
       connected.upbit = connected.binance = connected.bitbank = false;
       circuitBreaks.clear();
       hasBeenLive = false;
@@ -188,8 +166,7 @@ export function createClientAggregator(options: ClientAggregatorOptions): Client
       options.onStatusChange('connecting');
       options.onSnapshot(snapshot);
 
-      void refreshFx(generation);
-
+      fx.start();
       upbit.start();
       binance.start();
       bitbank.start();
@@ -198,9 +175,7 @@ export function createClientAggregator(options: ClientAggregatorOptions): Client
     },
     stop: () => {
       stopped = true;
-      generation += 1;
-      if (fxTimer !== null) clearTimeout(fxTimer);
-      fxTimer = null;
+      fx.stop();
       if (publishTimer !== null) {
         clearInterval(publishTimer);
         publishTimer = null;

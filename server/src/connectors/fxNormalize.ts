@@ -35,8 +35,9 @@ function buildRate(
   fetchedAt: number,
   source: string,
   ratesDate: string,
+  observedAt: number,
 ): Rate | null {
-  const rate: Rate = { value, fetchedAt, source, ratesDate };
+  const rate: Rate = { value, fetchedAt, source, ratesDate, observedAt };
   const parsed = rateSchema.safeParse(rate);
   return parsed.success ? parsed.data : null;
 }
@@ -52,14 +53,24 @@ function extractErApiRates(
   }
 
   const ratesDate = unixToRatesDate(data.time_last_update_unix);
-  const usdKrw = buildRate(krw, fetchedAt, ER_API_SOURCE, ratesDate);
-  const usdJpy = buildRate(jpy, fetchedAt, ER_API_SOURCE, ratesDate);
+  const observedAt = data.time_last_update_unix * 1_000;
+  const usdKrw = buildRate(krw, fetchedAt, ER_API_SOURCE, ratesDate, observedAt);
+  const usdJpy = buildRate(jpy, fetchedAt, ER_API_SOURCE, ratesDate, observedAt);
 
   if (!usdKrw || !usdJpy) {
     return null;
   }
 
   return { usdKrw, usdJpy };
+}
+
+/**
+ * Frankfurter/ECB publishes only a business `date`, not an exact instant.
+ * ECB reference rates are released around 16:00 CET (~15:00 UTC outside DST);
+ * this is an approximation, not a verified publication timestamp.
+ */
+function frankfurterDateToApproxObservedAt(date: string): number {
+  return Date.parse(`${date}T15:00:00Z`);
 }
 
 function detectTimeEol(data: ErApiResponse): { detected: boolean; unix: number | null } {
@@ -107,8 +118,24 @@ export function normalizeFrankfurterResponse(raw: unknown, fetchedAt: number): F
     return null;
   }
 
-  const usdKrw = buildRate(parsed.data.rates.KRW, fetchedAt, FRANKFURTER_SOURCE, parsed.data.date);
-  const usdJpy = buildRate(parsed.data.rates.JPY, fetchedAt, FRANKFURTER_SOURCE, parsed.data.date);
+  // Clamp to fetchedAt: the ~15:00Z approximation can land after the actual ECB
+  // release (~14:00Z in summer), which would otherwise show a publication time in
+  // the future relative to when we fetched it.
+  const observedAt = Math.min(frankfurterDateToApproxObservedAt(parsed.data.date), fetchedAt);
+  const usdKrw = buildRate(
+    parsed.data.rates.KRW,
+    fetchedAt,
+    FRANKFURTER_SOURCE,
+    parsed.data.date,
+    observedAt,
+  );
+  const usdJpy = buildRate(
+    parsed.data.rates.JPY,
+    fetchedAt,
+    FRANKFURTER_SOURCE,
+    parsed.data.date,
+    observedAt,
+  );
 
   if (!usdKrw || !usdJpy) {
     return null;

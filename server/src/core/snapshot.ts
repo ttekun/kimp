@@ -47,8 +47,10 @@ export function deriveFeedStatus(
 }
 
 function deriveFxStatus(rate: Rate, now: number): FeedStatus {
+  // Anchor on the provider's publication instant, not local fetch time — a freshly
+  // fetched but not-yet-updated provider response must not read as "just fetched".
   return deriveFeedStatus(
-    rate.fetchedAt,
+    rate.observedAt ?? rate.fetchedAt,
     now,
     STALENESS_THRESHOLDS.fx.staleAfterMs,
     STALENESS_THRESHOLDS.fx.downAfterMs,
@@ -198,7 +200,10 @@ function computeCoinPremiumBitbank(
 }
 
 function recomputeKrwPerJpy(fx: FxSnapshot): FxSnapshot {
-  if (fx.usdKrw === undefined || fx.usdJpy === undefined) {
+  // Bitbank's cross rate must combine a USD/KRW and USD/JPY pair from the same
+  // provider poll; mixing sources (e.g. an intraday KRW leg with a stale daily
+  // JPY leg) would silently measure something other than the documented Pair B basis.
+  if (fx.usdKrw === undefined || fx.usdJpy === undefined || fx.usdKrw.source !== fx.usdJpy.source) {
     return { ...fx, krwPerJpy: undefined };
   }
 

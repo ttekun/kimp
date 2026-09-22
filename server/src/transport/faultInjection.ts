@@ -105,8 +105,10 @@ function killFeed(connectors: AggregatorConnectors, feed: FaultFeed): void {
 }
 
 /**
- * Ages FX `fetchedAt` without waiting 26h. Stops the poller so a later scheduled
- * fetch cannot overwrite the injected age.
+ * Ages FX `fetchedAt`/`observedAt` without waiting 26h. Stops the poller so a later
+ * scheduled fetch cannot overwrite the injected age. Staleness is judged from
+ * `observedAt` (see snapshot.ts `deriveFxStatus`), so both must be backdated together —
+ * aging only `fetchedAt` would be a no-op against a real rate that carries `observedAt`.
  */
 export function applyAgedFx(
   store: AggregatorSnapshotStore,
@@ -118,10 +120,10 @@ export function applyAgedFx(
   const now = Date.now();
   const fetchedAt = now - ageMs;
   const usdKrw: Rate | undefined = snapshot.fx.usdKrw
-    ? { ...snapshot.fx.usdKrw, fetchedAt }
+    ? { ...snapshot.fx.usdKrw, fetchedAt, observedAt: fetchedAt }
     : undefined;
   const usdJpy: Rate | undefined = snapshot.fx.usdJpy
-    ? { ...snapshot.fx.usdJpy, fetchedAt }
+    ? { ...snapshot.fx.usdJpy, fetchedAt, observedAt: fetchedAt }
     : undefined;
   if (!usdKrw || !usdJpy) {
     throw new Error('Cannot age FX: usdKrw/usdJpy missing from snapshot');

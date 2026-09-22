@@ -1,12 +1,15 @@
-import {
-  ER_API_URL,
-  FRANKFURTER_URL,
-  normalizeErApiResponse,
-  normalizeFrankfurterResponse,
-  type FxRates,
-} from '@kimchi/fx-normalize';
+import { ER_API_SOURCE, FxPoller, type FxRates } from '@kimchi/fx-poller';
 
-import { readFxCache, writeFxCache } from './fxCache';
+import { readFxSeed, writeFxSeed } from './fxCache';
+
+export interface FxBrowserCallbacks {
+  onRates: (rates: FxRates) => void;
+}
+
+export interface FxBrowserClient {
+  start: () => void;
+  stop: () => void;
+}
 
 export interface FxBrowserOptions {
   fetchFn?: typeof fetch;
@@ -14,55 +17,63 @@ export interface FxBrowserOptions {
   storage?: Storage | null;
 }
 
-export async function loadFxRates(options: FxBrowserOptions = {}): Promise<FxRates | null> {
-  const fetchFn = options.fetchFn ?? fetch.bind(globalThis);
-  const now = options.now ?? Date.now;
-  const nowMs = now();
-  let storage = options.storage ?? null;
-  if (options.storage === undefined) {
-    try {
-      storage = globalThis.localStorage ?? null;
-    } catch {
-      /* Storage may be blocked. */
-    }
+function resolveStorage(options: FxBrowserOptions): Storage | null {
+  if (options.storage !== undefined) {
+    return options.storage;
   }
-
-  if (storage) {
-    const cached = readFxCache(storage, nowMs);
-    if (cached) {
-      return {
-        usdKrw: cached.usdKrw,
-        usdJpy: cached.usdJpy,
-      };
-    }
-  }
-
-  const primary = await fetchJson(fetchFn, ER_API_URL);
-  const fromErApi = primary === null ? null : normalizeErApiResponse(primary, nowMs);
-  if (fromErApi) {
-    const rates = { usdKrw: fromErApi.usdKrw, usdJpy: fromErApi.usdJpy };
-    if (storage) {
-      writeFxCache(storage, nowMs, rates);
-    }
-    return rates;
-  }
-
-  const fallback = await fetchJson(fetchFn, FRANKFURTER_URL);
-  const fromFrankfurter = fallback === null ? null : normalizeFrankfurterResponse(fallback, nowMs);
-  if (fromFrankfurter && storage) {
-    writeFxCache(storage, nowMs, fromFrankfurter);
-  }
-  return fromFrankfurter;
-}
-
-async function fetchJson(fetchFn: typeof fetch, url: string): Promise<unknown | null> {
   try {
-    const response = await fetchFn(url, { signal: AbortSignal.timeout(10_000) });
-    if (!response.ok) {
-      return null;
-    }
-    return (await response.json()) as unknown;
+    return globalThis.localStorage ?? null;
   } catch {
     return null;
   }
+}
+
+/**
+ * Browser FX client: reuses the server's `FxPoller` (provider-aware scheduling,
+ * daily fetch budget, primary/fallback + cross-check divergence, error classification)
+ * instead of duplicating that logic with a UTC-date cache. A localStorage seed lets a
+ * page reload skip a redundant fetch while its previous poll schedule is still valid;
+ * the seed is invalidated (see fxCache.ts) once that schedule has passed, so a
+ * pre-update rate can never be served past the provider's real next update.
+ */
+export function createFxBrowserClient(
+  callbacks: FxBrowserCallbacks,
+  options: FxBrowserOptions = {},
+): FxBrowserClient {
+  const now = options.now ?? Date.now;
+  const fetchFn = options.fetchFn ?? fetch.bind(globalThis);
+  const storage = resolveStorage(options);
+
+  const seed = storage ? (readFxSeed(storage, now()) ?? undefined) : undefined;
+
+  let latestRates: FxRates | null = seed?.rates ?? null;
+  let latestFromPrimary = seed?.fromPrimary ?? false;
+
+  const persistSeed = (nextPrimaryPollAt: number): void => {
+    if (!storage || !latestRates) return;
+    writeFxSeed(storage, { rates: latestRates, fromPrimary: latestFromPrimary, nextPrimaryPollAt });
+  };
+
+  const poller = new FxPoller({
+    fetchFn,
+    now,
+    seed,
+    onRates: (rates) => {
+      latestRates = rates;
+      latestFromPrimary = rates.usdKrw.source === ER_API_SOURCE;
+      callbacks.onRates(rates);
+    },
+    // Always fires after `onRates` within the same poll cycle, once the new
+    // schedule is known — see FxPoller.runPrimaryPoll / runFallbackPoll.
+    onScheduled: persistSeed,
+  });
+
+  return {
+    start: () => {
+      void poller.start();
+    },
+    stop: () => {
+      poller.stop();
+    },
+  };
 }

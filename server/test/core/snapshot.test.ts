@@ -320,4 +320,42 @@ describe('mergeFxRate krwPerJpy', () => {
     snapshot = mergeFxRate(snapshot, 'usdJpy', makeRate(BASE_TS, { value: USD_JPY }), now);
     expect(snapshot.fx.krwPerJpy).toBeCloseTo(USD_KRW / USD_JPY, 12);
   });
+
+  it('omits krwPerJpy when USD/KRW and USD/JPY come from different sources', () => {
+    const now = BASE_TS;
+    let snapshot = createEmptySnapshot(now);
+    snapshot = mergeFxRate(snapshot, 'usdKrw', makeRate(BASE_TS, { source: 'er-api' }), now);
+    snapshot = mergeFxRate(
+      snapshot,
+      'usdJpy',
+      makeRate(BASE_TS, { value: USD_JPY, source: 'frankfurter' }),
+      now,
+    );
+
+    // Mixing an intraday/primary KRW leg with a stale/fallback JPY leg (or vice versa)
+    // would silently compute a cross rate that isn't the documented Pair B basis.
+    expect(snapshot.fx.krwPerJpy).toBeUndefined();
+  });
+});
+
+describe('FX staleness anchored on observedAt', () => {
+  it('marks a freshly-fetched but not-yet-updated rate as stale, not live', () => {
+    const now = BASE_TS + STALENESS_THRESHOLDS.fx.staleAfterMs + HOUR_MS;
+    const snapshot = seedBtcSnapshot(now, {
+      upbitTs: now,
+      binanceTs: now,
+    });
+    // Re-merge FX with fetchedAt == now (just fetched) but observedAt far in the past
+    // (the provider's response was a stale, not-yet-updated payload).
+    let next = mergeFxRate(snapshot, 'usdKrw', makeRate(now, { observedAt: BASE_TS }), now);
+    next = mergeFxRate(
+      next,
+      'usdJpy',
+      makeRate(now, { value: USD_JPY, observedAt: BASE_TS }),
+      now,
+    );
+
+    // A naive fetchedAt-based check would see age 0 and call this live.
+    expect(next.coins.BTC.premiumBinance?.status).toBe('stale');
+  });
 });

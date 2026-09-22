@@ -1,7 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { createClientAggregator, FX_RETRY_INTERVAL_MS } from './clientAggregator';
-import { readFxCache, fxCacheKey } from './fxCache';
-import { loadFxRates } from './fxBrowser';
+import { createClientAggregator, type ClientAggregatorOptions } from './clientAggregator';
 import { buildPremiumTableRows } from './premiumTable';
 import type { UpbitBrowserCallbacks } from './upbitBrowser';
 import type { BitbankBrowserCallbacks } from './bitbankBrowser';
@@ -9,17 +7,27 @@ import type { MarketSnapshot } from './types';
 import { bitbankWsBtcFixture } from '../../../server/test/connectors/fixtures/bitbank';
 
 const now = bitbankWsBtcFixture.message.data.timestamp;
+
 const rates = {
-  usdKrw: { value: 1400, fetchedAt: now, source: 'er-api', ratesDate: '2026-08-16' },
-  usdJpy: { value: 150, fetchedAt: now, source: 'er-api', ratesDate: '2026-08-16' },
+  usdKrw: { value: 1400, fetchedAt: now, source: 'er-api', ratesDate: '2026-08-16', observedAt: now },
+  usdJpy: { value: 150, fetchedAt: now, source: 'er-api', ratesDate: '2026-08-16', observedAt: now },
 };
+
+/** Default stub: emits fixed FX rates once on start, like a real client would. */
+function defaultCreateFx(): NonNullable<ClientAggregatorOptions['createFx']> {
+  return (callbacks) => ({
+    start: () => callbacks.onRates(rates),
+    stop: () => undefined,
+  });
+}
+
 afterEach(() => {
   vi.useRealTimers();
   vi.restoreAllMocks();
   localStorage.clear();
 });
 
-function setup(loadFx = vi.fn(async () => rates)) {
+function setup(createFx = defaultCreateFx()) {
   vi.useFakeTimers();
   vi.setSystemTime(now);
   let bitbank!: BitbankBrowserCallbacks;
@@ -27,7 +35,7 @@ function setup(loadFx = vi.fn(async () => rates)) {
   let latest!: MarketSnapshot;
   const client = { start: vi.fn(), stop: vi.fn() };
   const aggregator = createClientAggregator({
-    loadFx,
+    createFx,
     createUpbit: (callbacks) => {
       upbit = callbacks;
       return client;
@@ -42,7 +50,7 @@ function setup(loadFx = vi.fn(async () => rates)) {
     },
     onStatusChange: vi.fn(),
   });
-  return { aggregator, bitbank, upbit, loadFx, snapshot: () => latest };
+  return { aggregator, bitbank, upbit, snapshot: () => latest };
 }
 
 describe('review regressions', () => {
@@ -106,65 +114,15 @@ describe('review regressions', () => {
     h.aggregator.stop();
   });
 
-  it('retries failed FX loads and refreshes on the next UTC day', async () => {
-    const load = vi.fn().mockRejectedValueOnce(new Error('offline')).mockResolvedValue(rates);
-    const h = setup(load);
+  it('is idempotent: a second start() while running does not restart the FX client', async () => {
+    const fxStart = vi.fn();
+    const fxStop = vi.fn();
+    const h = setup(() => ({ start: fxStart, stop: fxStop }));
     h.aggregator.start();
-    await vi.advanceTimersByTimeAsync(0);
-    vi.setSystemTime(
-      Math.floor(now / 86400000) * 86400000 + 86400000 - FX_RETRY_INTERVAL_MS - 1000,
-    );
-    await vi.advanceTimersByTimeAsync(FX_RETRY_INTERVAL_MS);
-    expect(load).toHaveBeenCalledTimes(2);
-    await vi.advanceTimersByTimeAsync(1000);
-    expect(load).toHaveBeenCalledTimes(3);
+    h.aggregator.start();
+    expect(fxStart).toHaveBeenCalledTimes(1);
     h.aggregator.stop();
+    expect(fxStop).toHaveBeenCalledTimes(1);
     expect(vi.getTimerCount()).toBe(0);
-  });
-
-  it('ignores FX responses from a previous start and makes start idempotent', async () => {
-    let resolve!: (value: typeof rates) => void;
-    const load = vi
-      .fn()
-      .mockImplementationOnce(
-        () =>
-          new Promise((r) => {
-            resolve = r;
-          }),
-      )
-      .mockResolvedValue(null);
-    const h = setup(load);
-    h.aggregator.start();
-    h.aggregator.start();
-    expect(load).toHaveBeenCalledTimes(1);
-    h.aggregator.stop();
-    h.aggregator.start();
-    resolve(rates);
-    await vi.advanceTimersByTimeAsync(1000);
-    expect(h.snapshot().fx.usdKrw).toBeUndefined();
-    h.aggregator.stop();
-    expect(vi.getTimerCount()).toBe(0);
-  });
-
-  it.each([
-    { usdKrw: { value: 1400 }, usdJpy: { value: 150 } },
-    { ...rates, usdKrw: { ...rates.usdKrw, fetchedAt: now + 1 } },
-    { ...rates, usdKrw: { ...rates.usdKrw, value: -1 } },
-    { ...rates, usdJpy: { ...rates.usdJpy, source: 'different' } },
-  ])('rejects malformed cached rates: %j', (candidate) => {
-    localStorage.setItem(
-      fxCacheKey(new Date(now).toISOString().slice(0, 10)),
-      JSON.stringify(candidate),
-    );
-    expect(readFxCache(localStorage, now)).toBeNull();
-  });
-
-  it('fetches FX even if the localStorage getter is blocked', async () => {
-    vi.spyOn(globalThis, 'localStorage', 'get').mockImplementation(() => {
-      throw new Error('blocked');
-    });
-    const fetchFn = vi.fn().mockResolvedValue(new Response('{}'));
-    await expect(loadFxRates({ fetchFn })).resolves.toBeNull();
-    expect(fetchFn).toHaveBeenCalledTimes(2);
   });
 });

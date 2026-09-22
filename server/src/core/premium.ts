@@ -71,7 +71,7 @@ function buildPremium(
     inputTs: {
       upbit: upbit.ts,
       target: target.ts,
-      fx: fx.fetchedAt,
+      fx: fx.observedAt ?? fx.fetchedAt,
     },
     status,
   };
@@ -146,6 +146,7 @@ export function computePremiumBitbank(inputs: PremiumBitbankInputs): Premium | n
   const fxForInputTs: Rate = {
     ...usdKrw,
     fetchedAt: Math.min(usdKrw.fetchedAt, usdJpy.fetchedAt),
+    observedAt: Math.min(usdKrw.observedAt ?? usdKrw.fetchedAt, usdJpy.observedAt ?? usdJpy.fetchedAt),
   };
 
   return buildPremium(upbit, bitbank, fxForInputTs, computedAt, pct, diffKrw);

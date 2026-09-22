@@ -1,4 +1,4 @@
-import type { Rate } from './types';
+import type { FeedStatus, Rate } from './types';
 
 /** Missing/invalid FX must never render as a frozen current figure. */
 export const FX_EM_DASH = '—';
@@ -41,4 +41,41 @@ export function formatFxSourceBadge(rate: Rate | undefined): string | null {
   }
   const date = formatRatesDateShort(rate.ratesDate);
   return `${rate.source} ${date}`;
+}
+
+/** "HH:MM UTC" from the provider's publication instant (falls back to fetch time). */
+export function formatFxReferenceTime(rate: Rate | undefined): string | null {
+  if (!rate) {
+    return null;
+  }
+  const at = rate.observedAt ?? rate.fetchedAt;
+  if (!Number.isFinite(at)) {
+    return null;
+  }
+  const iso = new Date(at).toISOString();
+  return `${iso.slice(11, 16)} UTC`;
+}
+
+export type FxFreshnessMode = 'daily' | 'stale' | 'unavailable';
+
+/** All current providers (er-api, Frankfurter) are once-daily; there is no intraday source wired in. */
+export function fxFreshnessMode(status: FeedStatus): FxFreshnessMode {
+  if (status === 'down') {
+    return 'unavailable';
+  }
+  if (status === 'stale') {
+    return 'stale';
+  }
+  return 'daily';
+}
+
+export function formatFxFreshnessLabel(status: FeedStatus): string {
+  switch (fxFreshnessMode(status)) {
+    case 'daily':
+      return 'daily rate';
+    case 'stale':
+      return 'daily rate — stale';
+    case 'unavailable':
+      return 'unavailable';
+  }
 }

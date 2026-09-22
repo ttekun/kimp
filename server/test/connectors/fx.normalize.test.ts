@@ -27,12 +27,14 @@ describe('normalizeErApiResponse', () => {
         fetchedAt: FETCHED_AT,
         source: 'er-api',
         ratesDate: '2026-08-16',
+        observedAt: 1_786_838_551_000,
       },
       usdJpy: {
         value: 159.225847,
         fetchedAt: FETCHED_AT,
         source: 'er-api',
         ratesDate: '2026-08-16',
+        observedAt: 1_786_838_551_000,
       },
       nextUpdateUnix: 1_786_926_221,
       timeEolDetected: false,
@@ -67,12 +69,14 @@ describe('normalizeFrankfurterResponse', () => {
         fetchedAt: FETCHED_AT,
         source: 'frankfurter',
         ratesDate: '2026-08-14',
+        observedAt: Date.parse('2026-08-14T15:00:00Z'),
       },
       usdJpy: {
         value: 159.01,
         fetchedAt: FETCHED_AT,
         source: 'frankfurter',
         ratesDate: '2026-08-14',
+        observedAt: Date.parse('2026-08-14T15:00:00Z'),
       },
     });
   });

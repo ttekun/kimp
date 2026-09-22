@@ -24,6 +24,7 @@ export const rateSchema = z.object({
   fetchedAt: z.number().int().nonnegative(),
   source: z.string().min(1),
   ratesDate: z.string().min(1),
+  observedAt: z.number().int().nonnegative().optional(),
 });
 
 export const premiumSchema = z.object({

@@ -11,7 +11,8 @@
       "@kimchi/upbit-wire": ["../server/src/connectors/upbitWire.ts"],
       "@kimchi/binance-wire": ["../server/src/connectors/binanceWire.ts"],
       "@kimchi/bitbank-wire": ["../server/src/connectors/bitbankWire.ts"],
-      "@kimchi/fx-normalize": ["../server/src/connectors/fxNormalize.ts"]
+      "@kimchi/fx-normalize": ["../server/src/connectors/fxNormalize.ts"],
+      "@kimchi/fx-poller": ["../server/src/connectors/fx.ts"]
     },
     "noEmit": true,
     "noUnusedLocals": true,

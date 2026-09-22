@@ -10,9 +10,10 @@ import {
 export const FX_DIVERGENCE_THRESHOLD_PCT = 2;
 
 /**
- * Minimum interval between scheduled primary polls.
- * er-api ToS: ≤1 request/24h avoids restrictions; we schedule off time_next_update_utc
- * but never sooner than this floor.
+ * er-api ToS: ≤1 request/24h avoids restrictions. We schedule primary polls off
+ * `time_next_update_unix` whenever it's still in the future (see
+ * `computeNextPrimaryPollTime`); this floor only applies on the fallback-poll-failure
+ * path, where the provider's next-update time isn't available to schedule off.
  */
 export const FX_MIN_PRIMARY_INTERVAL_MS = 23 * 60 * 60 * 1_000;
 
@@ -21,6 +22,18 @@ export const FX_CROSS_CHECK_DELAY_MS = 5_000;
 
 /** er-api 429 lockout duration per docs/03. */
 export const FX_429_RETRY_DELAY_MS = 20 * 60 * 1_000;
+
+/** Wait past the provider's stated next-update time before polling, so we don't race it. */
+export const FX_NEXT_UPDATE_GRACE_MS = 2 * 60 * 1_000;
+
+/**
+ * Short retry when the provider is late: its stated next-update time has already
+ * passed but the payload we just polled still hasn't rolled over. Falling back to
+ * the 23h floor here would be the exact bug this whole scheduler exists to avoid —
+ * it would serve the not-yet-updated rate for a full extra day instead of a few
+ * short retries. `canFetch()`'s daily budget bounds how many of these can happen.
+ */
+export const FX_LATE_PROVIDER_RETRY_MS = 20 * 60 * 1_000;
 
 /** Project-wide daily FX fetch budget (primary + cross-check + retries). */
 export const FX_DAILY_FETCH_BUDGET = { min: 2, max: 4 } as const;
@@ -73,11 +86,26 @@ export interface FxConnectorHealth {
 
 export interface FxPollerCallbacks {
   onRates?: (rates: FxRates) => void;
+  /** Fired whenever the next primary poll time is (re)scheduled, including from a seed. */
+  onScheduled?: (nextPrimaryPollAt: number) => void;
+}
+
+/**
+ * A previously-fetched good state to resume from instead of fetching immediately —
+ * e.g. a browser tab restoring rates persisted to localStorage by a prior session.
+ * Ignored once `nextPrimaryPollAt` is in the past: the poller fetches immediately then.
+ */
+export interface FxPollerSeed {
+  rates: FxRates;
+  /** Whether `rates` came from the primary provider (er-api) vs. the fallback. */
+  fromPrimary: boolean;
+  nextPrimaryPollAt: number;
 }
 
 export interface FxPollerOptions extends FxPollerCallbacks {
   fetchFn?: FetchFn;
   now?: () => number;
+  seed?: FxPollerSeed;
 }
 
 export function computeDivergencePct(primary: number, fallback: number): number {
@@ -173,12 +201,16 @@ export class FxPoller {
     totalFetches: 0,
   };
 
+  private readonly seed: FxPollerSeed | undefined;
+
   constructor(options: FxPollerOptions = {}) {
     this.fetchFn = options.fetchFn ?? fetch;
     this.now = options.now ?? Date.now;
     this.callbacks = {
       onRates: options.onRates,
+      onScheduled: options.onScheduled,
     };
+    this.seed = options.seed;
   }
 
   /** Last successfully fetched normalized rates (never raw provider payloads). */
@@ -206,10 +238,29 @@ export class FxPoller {
     };
   }
 
+  /** When the next primary poll is scheduled, or `null` if none is scheduled yet. */
+  getNextPrimaryPollAt(): number | null {
+    return this.nextPrimaryPollAt;
+  }
+
   async start(): Promise<void> {
     if (!this.stopped) return;
     this.stopped = false;
     this.generation += 1;
+
+    if (this.seed && this.seed.nextPrimaryPollAt > this.now()) {
+      this.healthState = { ...this.healthState, status: 'ok' };
+      this.lastGoodRates = {
+        usdKrw: { ...this.seed.rates.usdKrw },
+        usdJpy: { ...this.seed.rates.usdJpy },
+      };
+      if (this.seed.fromPrimary) {
+        this.lastPrimaryRates = { ...this.lastGoodRates };
+      }
+      this.callbacks.onRates?.(this.getRates()!);
+      this.schedulePrimaryPoll(this.seed.nextPrimaryPollAt);
+      return;
+    }
     this.healthState = { ...this.healthState, status: 'polling' };
     await this.runPrimaryPoll();
   }
@@ -302,6 +353,7 @@ export class FxPoller {
     const effectiveAt = Math.max(at, this.now());
     const delay = Math.max(0, effectiveAt - this.now());
     this.nextPrimaryPollAt = effectiveAt;
+    this.callbacks.onScheduled?.(effectiveAt);
     this.primaryTimer = setTimeout(() => {
       this.primaryTimer = null;
       void this.runPrimaryPoll();
@@ -342,10 +394,28 @@ export class FxPoller {
     }, FX_429_RETRY_DELAY_MS);
   }
 
+  /**
+   * Schedules the next primary poll off the provider's stated next-update time.
+   *
+   * The 23h floor is a fetch-budget guard, not a substitute for the provider's own
+   * schedule: if `nextUpdateUnix` is still in the future, trust it (plus a small
+   * grace window so we don't poll a few seconds before the provider has actually
+   * rolled the rate). Only fall back to the floor when the provider's next-update
+   * timestamp is missing or already in the past — e.g. a pre-update response whose
+   * stated next update is sooner than the current time reflects. Forcing a 23h wait
+   * whenever it happens to be sooner than that is what let a pre-midnight fetch's
+   * stale rate sit cached for a full extra day.
+   */
   private computeNextPrimaryPollTime(nextUpdateUnix: number): number {
     const nextUpdateMs = nextUpdateUnix * 1_000;
-    const minNext = this.now() + FX_MIN_PRIMARY_INTERVAL_MS;
-    return Math.max(nextUpdateMs, minNext);
+    const now = this.now();
+    if (nextUpdateMs > now) {
+      return Math.max(nextUpdateMs + FX_NEXT_UPDATE_GRACE_MS, now);
+    }
+    // The provider's stated next-update time has already passed but this payload still
+    // hasn't rolled over (a late/stuck provider). Retry soon instead of the 23h floor —
+    // waiting a full day here would serve the not-yet-updated rate for an extra day.
+    return now + FX_LATE_PROVIDER_RETRY_MS;
   }
 
   private async fetchJson(

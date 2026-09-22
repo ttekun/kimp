@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  formatFxFreshnessLabel,
+  formatFxReferenceTime,
   formatFxSourceBadge,
   formatJpyKrw,
   formatUsdKrw,
@@ -32,5 +34,32 @@ describe('formatFx', () => {
       }),
     ).toBe('er-api 08-16');
     expect(formatFxSourceBadge(undefined)).toBeNull();
+  });
+
+  it('formats the provider reference time from observedAt, falling back to fetchedAt', () => {
+    expect(
+      formatFxReferenceTime({
+        value: 1414,
+        fetchedAt: Date.parse('2026-08-16T05:00:00Z'),
+        source: 'er-api',
+        ratesDate: '2026-08-16',
+        observedAt: Date.parse('2026-08-16T00:02:31Z'),
+      }),
+    ).toBe('00:02 UTC');
+    expect(
+      formatFxReferenceTime({
+        value: 1414,
+        fetchedAt: Date.parse('2026-08-16T05:00:00Z'),
+        source: 'er-api',
+        ratesDate: '2026-08-16',
+      }),
+    ).toBe('05:00 UTC');
+    expect(formatFxReferenceTime(undefined)).toBeNull();
+  });
+
+  it('labels freshness modes honestly (no fabricated "intraday" claim)', () => {
+    expect(formatFxFreshnessLabel('live')).toBe('daily rate');
+    expect(formatFxFreshnessLabel('stale')).toBe('daily rate — stale');
+    expect(formatFxFreshnessLabel('down')).toBe('unavailable');
   });
 });

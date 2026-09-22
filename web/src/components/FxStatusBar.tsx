@@ -3,6 +3,8 @@ import { deriveFeedStatus, STALENESS_THRESHOLDS } from '@kimchi/core/snapshot';
 import { ThemeToggle } from './ui/ThemeToggle';
 import { deriveExchangeFeedStatus, deriveFxFeedStatus } from '../lib/feedStatus';
 import {
+  formatFxFreshnessLabel,
+  formatFxReferenceTime,
   formatFxSourceBadge,
   formatJpyKrw,
   formatUsdKrw,
@@ -56,6 +58,8 @@ export function FxStatusBar({ snapshot, connectionStatus }: FxStatusBarProps) {
   const krwPerJpy = snapshot?.fx.krwPerJpy;
   const fxStatus = deriveFxFeedStatus(snapshot);
   const badge = formatFxSourceBadge(usdKrw);
+  const referenceTime = formatFxReferenceTime(usdKrw);
+  const freshnessLabel = formatFxFreshnessLabel(fxStatus);
   const showTransportBanner = connectionStatus === 'reconnecting' || connectionStatus === 'polling';
 
   const fxIsDown = fxStatus === 'down';
@@ -83,6 +87,10 @@ export function FxStatusBar({ snapshot, connectionStatus }: FxStatusBarProps) {
             <span className="fx-bar__pair">USD/KRW</span>
             <span className="fx-bar__value tabular-nums">{usdDisplay}</span>
             {badge ? <span className="fx-bar__badge">{badge}</span> : null}
+            <span className="fx-bar__hint" title={referenceTime ?? undefined}>
+              {freshnessLabel}
+              {referenceTime ? ` · ${referenceTime}` : ''}
+            </span>
           </span>
           <span className="fx-bar__rate" data-missing={jpyMissing ? 'true' : undefined}>
             <span className="fx-bar__pair">JPY/KRW</span>

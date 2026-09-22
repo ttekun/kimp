@@ -16,6 +16,7 @@ export const kimchiAliases = {
   '@kimchi/binance-wire': path.join(serverSrc, 'connectors/binanceWire.ts'),
   '@kimchi/bitbank-wire': path.join(serverSrc, 'connectors/bitbankWire.ts'),
   '@kimchi/fx-normalize': path.join(serverSrc, 'connectors/fxNormalize.ts'),
+  '@kimchi/fx-poller': path.join(serverSrc, 'connectors/fx.ts'),
 };
 
 export default defineConfig({
